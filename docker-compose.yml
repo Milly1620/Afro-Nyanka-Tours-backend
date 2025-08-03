@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: .
@@ -9,7 +7,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://afro_user:afro_password@db:5432/afro_tours_db
       - SMTP_SERVER=smtp.gmail.com
-      - SMTP_PORT=587
+      - SMTP_PORT=465
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - ADMIN_EMAIL=${ADMIN_EMAIL}

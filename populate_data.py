@@ -44,11 +44,11 @@ def create_locations(db: Session):
         
         # Other countries
         {"name": "Voodoo Market", "country": "Togo", "region": "Lomé"},
-        {"name": "Voodoo Market", "country": "Burkina Faso", "region": "Ouagadougou"},
-        {"name": "Safari Experience", "country": "Kenya", "region": "Nairobi"},
-        {"name": "Cultural Tour", "country": "Ethiopia", "region": "Addis Ababa"},
-        {"name": "Wine Tour", "country": "South Africa", "region": "Cape Town"},
-        {"name": "Mountain Adventure", "country": "Lesotho", "region": "Maseru"},
+        {"name": "Voodoo Market", "country": "Burkina Faso", "region": "Ouagadougou"}
+        # {"name": "Safari Experience", "country": "Kenya", "region": "Nairobi"},
+        # {"name": "Cultural Tour", "country": "Ethiopia", "region": "Addis Ababa"},
+        # {"name": "Wine Tour", "country": "South Africa", "region": "Cape Town"},
+        # {"name": "Mountain Adventure", "country": "Lesotho", "region": "Maseru"},
     ]
     
     created_locations = {}
@@ -142,42 +142,6 @@ def create_tours(db: Session, location_ids: dict):
             "region": "Ouagadougou",
             "locations": [
                 "Voodoo Market_Burkina Faso"
-            ]
-        },
-        {
-            "name": "Kenya Safari Adventure",
-            "description": "Wildlife safari and cultural experiences in East Africa.",
-            "country": "Kenya",
-            "region": "Nairobi",
-            "locations": [
-                "Safari Experience_Kenya"
-            ]
-        },
-        {
-            "name": "Ethiopia Cultural Journey",
-            "description": "Discover the ancient culture and history of Ethiopia.",
-            "country": "Ethiopia",
-            "region": "Addis Ababa",
-            "locations": [
-                "Cultural Tour_Ethiopia"
-            ]
-        },
-        {
-            "name": "South Africa Wine & Culture Tour",
-            "description": "Experience the beauty of South Africa with wine tasting and cultural activities.",
-            "country": "South Africa",
-            "region": "Cape Town",
-            "locations": [
-                "Wine Tour_South Africa"
-            ]
-        },
-        {
-            "name": "Lesotho Mountain Adventure",
-            "description": "Mountain hiking and cultural experiences in the Kingdom in the Sky.",
-            "country": "Lesotho",
-            "region": "Maseru",
-            "locations": [
-                "Mountain Adventure_Lesotho"
             ]
         }
         

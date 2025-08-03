@@ -12,16 +12,13 @@ class Tour(Base):
     description = Column(Text)
     country = Column(String, nullable=False)
     region = Column(String)
-    # price_per_person = Column(Float, nullable=False)
-    # max_participants = Column(Integer, default=20)
-    # duration_days = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     tour_locations = relationship("TourLocation", back_populates="tour")
-    bookings = relationship("Booking", back_populates="tour")
+    booking_tours = relationship("BookingTour", back_populates="tour")
 
 
 class Location(Base):
@@ -36,6 +33,7 @@ class Location(Base):
 
     # Relationships
     tour_locations = relationship("TourLocation", back_populates="location")
+    booking_locations = relationship("BookingLocation", back_populates="location")
 
 
 class TourLocation(Base):
@@ -55,7 +53,6 @@ class Booking(Base):
     __tablename__ = "bookings"
 
     id = Column(Integer, primary_key=True, index=True)
-    tour_id = Column(Integer, ForeignKey("tours.id"), nullable=False)
     
     # Customer information
     customer_name = Column(String, nullable=False)
@@ -72,4 +69,33 @@ class Booking(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    tour = relationship("Tour", back_populates="bookings")
+    booking_tours = relationship("BookingTour", back_populates="booking")
+    booking_locations = relationship("BookingLocation", back_populates="booking")
+
+
+class BookingTour(Base):
+    __tablename__ = "booking_tours"
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=False)
+    tour_id = Column(Integer, ForeignKey("tours.id"), nullable=False)
+    order = Column(Integer, default=1)  # Order of tours in the booking
+
+    # Relationships
+    booking = relationship("Booking", back_populates="booking_tours")
+    tour = relationship("Tour", back_populates="booking_tours")
+
+
+class BookingLocation(Base):
+    __tablename__ = "booking_locations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=False)
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    tour_id = Column(Integer, ForeignKey("tours.id"), nullable=False)  # Which tour this location belongs to
+    order = Column(Integer, default=1)  # Order of locations within the tour
+
+    # Relationships
+    booking = relationship("Booking", back_populates="booking_locations")
+    location = relationship("Location", back_populates="booking_locations")
+    tour = relationship("Tour")

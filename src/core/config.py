@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     # Email settings
     smtp_server: str = "smtp.gmail.com"
-    smtp_port: int = 587
+    smtp_port: int = 465
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
     admin_email: Optional[str] = None

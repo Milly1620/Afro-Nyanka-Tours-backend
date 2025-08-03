@@ -43,6 +43,15 @@ def get_locations(db: Session = Depends(get_db)):
     return crud.get_locations(db)
 
 
+@router.get("/{tour_id}/locations/", response_model=List[schemas.Location])
+def get_tour_locations(tour_id: int, db: Session = Depends(get_db)):
+    """Get all locations for a specific tour"""
+    tour = crud.get_tour(db, tour_id=tour_id)
+    if tour is None:
+        raise HTTPException(status_code=404, detail="Tour not found")
+    return crud.get_tour_locations(db, tour_id=tour_id)
+
+
 @router.post("/locations/", response_model=schemas.Location)
 def create_location(location: schemas.LocationCreate, db: Session = Depends(get_db)):
     """Create a new location (admin only)"""

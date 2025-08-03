@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -61,6 +61,40 @@ class Tour(TourBase):
         from_attributes = True
 
 
+# New schemas for multi-tour/location booking
+class BookingLocationCreate(BaseModel):
+    location_id: int
+    tour_id: int
+    order: int = 1
+
+
+class BookingLocation(BaseModel):
+    id: int
+    location_id: int
+    tour_id: int
+    order: int
+    location: Location
+
+    class Config:
+        from_attributes = True
+
+
+class BookingTourCreate(BaseModel):
+    tour_id: int
+    locations: List[int] = []
+    order: int = 1
+
+
+class BookingTour(BaseModel):
+    id: int
+    tour_id: int
+    order: int
+    tour: Tour
+
+    class Config:
+        from_attributes = True
+
+
 class BookingBase(BaseModel):
     customer_name: str
     customer_email: EmailStr
@@ -71,15 +105,39 @@ class BookingBase(BaseModel):
 
 
 class BookingCreate(BookingBase):
-    tour_id: int
+    tour_selections: List[BookingTourCreate]  # Multiple tours with selected locations
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "customer_name": "John Doe",
+                "customer_email": "john@example.com",
+                "customer_age": 30,
+                "customer_country": "USA",
+                "preferred_date": "2024-06-15T00:00:00",
+                "additional_services": "Airport pickup required",
+                "tour_selections": [
+                    {
+                        "tour_id": 1,
+                        "locations": [1, 4, 5],  # Independence Square, Jamestown, Kwame Nkrumah Mausoleum
+                        "order": 1
+                    },
+                    {
+                        "tour_id": 2,
+                        "locations": [13],  # Elmina Castle
+                        "order": 2
+                    }
+                ]
+            }
+        }
 
 
 class Booking(BookingBase):
     id: int
-    tour_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    tour: Tour
+    booking_tours: List[BookingTour] = []
+    booking_locations: List[BookingLocation] = []
 
     class Config:
         from_attributes = True
@@ -88,3 +146,4 @@ class Booking(BookingBase):
 class BookingResponse(BaseModel):
     booking: Booking
     message: str
+    summary: Dict[str, Any] = {}  # Summary of selected tours and locations

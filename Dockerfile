@@ -17,6 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY alembic.ini .
 COPY alembic/ ./alembic/
+COPY populate_data.py .
+COPY test_email.py .
 
 # Expose port
 EXPOSE 8000
