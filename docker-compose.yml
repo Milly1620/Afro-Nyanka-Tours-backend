@@ -5,30 +5,29 @@ services:
       - "8000:8000"
     container_name: afro_tours_web
     environment:
-      - DATABASE_URL=postgresql://afro_user:afro_password@db:5432/afro_tours_db
+      - DATABASE_URL=${DATABASE_URL}
       - SMTP_SERVER=smtp.gmail.com
       - SMTP_PORT=465
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
-    depends_on:
-      - db
+
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
-  db:
-    image: postgres:15
-    container_name: afro_tours_db
-    environment:
-      - POSTGRES_DB=afro_tours_db
-      - POSTGRES_USER=afro_user
-      - POSTGRES_PASSWORD=afro_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+  # db:
+  #   image: postgres:15
+  #   container_name: afro_tours_db
+  #   environment:
+  #     - POSTGRES_DB=afro_tours_db
+  #     - POSTGRES_USER=afro_user
+  #     - POSTGRES_PASSWORD=afro_password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
 
-volumes:
-  postgres_data:
+# volumes:
+#   postgres_data:
