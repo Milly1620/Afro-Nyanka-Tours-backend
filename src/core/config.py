@@ -1,10 +1,11 @@
+import os
 from pydantic_settings import BaseSettings
 from typing import Optional
 
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql://afro_user:afro_password@localhost:5432/afro_tours_db"
+    DATABASE_URL: str 
     
     # Email settings
     smtp_server: str = "smtp.gmail.com"
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     admin_email: Optional[str] = None
     
     # App settings
-    debug: bool = True
+    debug: bool = False
     secret_key: str = "your-secret-key-here-change-in-production"
     
     class Config:
