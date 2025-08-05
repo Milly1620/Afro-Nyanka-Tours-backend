@@ -62,6 +62,7 @@ class Booking(Base):
     
     # Booking details
     preferred_date = Column(DateTime)
+    number_of_people = Column(Integer, nullable=False)
     additional_services = Column(Text)
     
     # Timestamps

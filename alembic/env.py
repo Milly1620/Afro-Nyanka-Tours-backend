@@ -7,11 +7,12 @@ import sys
 
 # Add the src directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
+import src.models
 from src.models.models import Base
-from src.models import models
+from src.models import models, analytics
 from src.core.config import settings
-
+from src.models.models import Tour, Location, TourLocation, Booking, BookingTour, BookingLocation
+from src.models.analytics import TourPopularity, LocationPopularity, CustomerDemographics
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -31,7 +32,7 @@ target_metadata = Base.metadata
 
 
 def get_database_url():
-    return settings.database_url
+    return settings.DATABASE_URL
 
 
 def run_migrations_offline() -> None:

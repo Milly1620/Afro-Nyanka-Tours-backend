@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import settings
-from src.api.routes import tours, bookings, analytics
+from src.api.routes import tours, bookings, analytics, contact
 from src.database.database import engine
 from src.models import models
 
@@ -27,6 +27,7 @@ app.add_middleware(
 app.include_router(tours.router, prefix="/api/tours", tags=["tours"])
 app.include_router(bookings.router, prefix="/api/bookings", tags=["bookings"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(contact.router, prefix="/api/contact", tags=["contact"])
 
 @app.get("/")
 async def root():

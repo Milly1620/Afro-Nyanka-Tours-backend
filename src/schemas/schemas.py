@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -61,6 +61,17 @@ class Tour(TourBase):
         from_attributes = True
 
 
+class CountriesResponse(BaseModel):
+    countries: List[str]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "countries": ["Ghana", "Nigeria", "South Africa", "Kenya"]
+            }
+        }
+
+
 # New schemas for multi-tour/location booking
 class BookingLocationCreate(BaseModel):
     location_id: int
@@ -102,6 +113,7 @@ class BookingBase(BaseModel):
     customer_country: Optional[str] = None
     preferred_date: Optional[datetime] = None
     additional_services: Optional[str] = None
+    number_of_people: int = Field(default=1, description="Number of people in the booking")
 
 
 class BookingCreate(BookingBase):
@@ -116,6 +128,7 @@ class BookingCreate(BookingBase):
                 "customer_country": "USA",
                 "preferred_date": "2024-06-15T00:00:00",
                 "additional_services": "Airport pickup required",
+                "number_of_people": 3,
                 "tour_selections": [
                     {
                         "tour_id": 1,
@@ -136,7 +149,6 @@ class Booking(BookingBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    booking_tours: List[BookingTour] = []
     booking_locations: List[BookingLocation] = []
 
     class Config:
@@ -147,3 +159,33 @@ class BookingResponse(BaseModel):
     booking: Booking
     message: str
     summary: Dict[str, Any] = {}  # Summary of selected tours and locations
+
+
+class ContactForm(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="User's full name")
+    email: EmailStr = Field(..., description="User's email address")
+    subject: str = Field(..., min_length=1, max_length=200, description="Email subject")
+    message: str = Field(..., min_length=10, max_length=2000, description="Message content")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Doe",
+                "email": "john.doe@example.com",
+                "subject": "Inquiry about Ghana tour packages",
+                "message": "Hello, I'm interested in learning more about your Ghana tour packages. Could you please provide more details about the pricing and availability for next month?"
+            }
+        }
+
+
+class ContactResponse(BaseModel):
+    message: str
+    success: bool = True
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "Your message has been sent successfully! We'll get back to you soon.",
+                "success": True
+            }
+        }

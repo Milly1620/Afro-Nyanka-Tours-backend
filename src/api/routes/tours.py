@@ -31,6 +31,13 @@ def get_tours_by_country(country: str, db: Session = Depends(get_db)):
     return tours
 
 
+@router.get("/tours/countries", response_model=schemas.CountriesResponse)
+def get_countries_with_tours(db: Session = Depends(get_db)):
+    """Get all countries that have active tours"""
+    countries = crud.get_countries_with_tours(db)
+    return schemas.CountriesResponse(countries=countries)
+
+
 @router.post("/", response_model=schemas.Tour)
 def create_tour(tour: schemas.TourCreate, db: Session = Depends(get_db)):
     """Create a new tour (admin only)"""
@@ -41,6 +48,15 @@ def create_tour(tour: schemas.TourCreate, db: Session = Depends(get_db)):
 def get_locations(db: Session = Depends(get_db)):
     """Get all locations"""
     return crud.get_locations(db)
+
+
+@router.get("/locations/country/{country}", response_model=List[schemas.Location])
+def get_locations_by_country(country: str, db: Session = Depends(get_db)):
+    """Get all locations by country in random order"""
+    locations = crud.get_locations_by_country(db, country=country)
+    if not locations:
+        raise HTTPException(status_code=404, detail=f"No locations found for country: {country}")
+    return locations
 
 
 @router.get("/{tour_id}/locations/", response_model=List[schemas.Location])

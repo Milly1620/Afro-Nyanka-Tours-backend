@@ -6,6 +6,7 @@ from src.core.config import settings
 from src.schemas.schemas import Booking
 import logging
 import sys
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -133,6 +134,10 @@ class EmailService:
                             <div class="stat-number">{{ total_locations }}</div>
                             <div class="stat-label">Locations</div>
                         </div>
+                        <div class="stat">
+                            <div class="stat-number">{{ number_of_people }}</div>
+                            <div class="stat-label">People</div>
+                        </div>
                     </div>
                     
                     <div class="booking-details">
@@ -177,6 +182,7 @@ class EmailService:
             preferred_date=booking.preferred_date.strftime("%B %d, %Y") if booking.preferred_date else "To be confirmed",
             customer_age=booking.customer_age,
             additional_services=booking.additional_services,
+            number_of_people=booking.number_of_people,
             total_tours=booking_summary["total_tours"],
             total_locations=booking_summary["total_locations"],
             tours_and_locations=booking_summary["tours_and_locations"]
@@ -426,6 +432,10 @@ class EmailService:
                             <span class="info-value">{{ customer_country }}</span>
                         </div>
                         <div class="info-row">
+                            <span class="info-label">Number of People</span>
+                            <span class="info-value">{{ number_of_people }}</span>
+                        </div>
+                        <div class="info-row">
                             <span class="info-label">Preferred Date</span>
                             <span class="info-value">{{ preferred_date }}</span>
                         </div>
@@ -474,6 +484,7 @@ class EmailService:
             customer_country=booking.customer_country or "Not provided",
             preferred_date=booking.preferred_date.strftime("%B %d, %Y") if booking.preferred_date else "Not specified",
             additional_services=booking.additional_services,
+            number_of_people=booking.number_of_people,
             total_tours=booking_summary["total_tours"],
             total_locations=booking_summary["total_locations"],
             tours_and_locations=booking_summary["tours_and_locations"],
@@ -481,5 +492,186 @@ class EmailService:
         )
         
         return self.send_email(self.admin_email, subject, html_content)
+
+    def send_contact_form_email(self, name: str, email: str, subject: str, message: str):
+        """Send contact form email to admin"""
+        admin_subject = f"Contact Form: {subject}"
+        
+        html_template = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Contact Form Submission</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    background-color: #f8f9fa;
+                    margin: 0;
+                    padding: 20px;
+                }
+                
+                .container {
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                }
+                
+                .header {
+                    background: #2E8B57;
+                    color: white;
+                    padding: 24px;
+                    text-align: center;
+                }
+                
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                }
+                
+                .content {
+                    padding: 32px;
+                }
+                
+                .contact-info {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 6px;
+                    margin-bottom: 24px;
+                    border-left: 4px solid #2E8B57;
+                }
+                
+                .info-row {
+                    display: flex;
+                    margin-bottom: 12px;
+                    align-items: center;
+                }
+                
+                .info-label {
+                    font-weight: 600;
+                    color: #2E8B57;
+                    min-width: 80px;
+                    margin-right: 16px;
+                }
+                
+                .info-value {
+                    color: #333;
+                }
+                
+                .message-section {
+                    margin-top: 24px;
+                }
+                
+                .message-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #2E8B57;
+                    margin-bottom: 16px;
+                    border-bottom: 2px solid #e2e8f0;
+                    padding-bottom: 8px;
+                }
+                
+                .message-content {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
+                    white-space: pre-wrap;
+                    font-size: 15px;
+                    line-height: 1.6;
+                }
+                
+                .footer {
+                    background: #f1f5f9;
+                    padding: 20px;
+                    text-align: center;
+                    color: #64748b;
+                    font-size: 14px;
+                }
+                
+                .reply-button {
+                    display: inline-block;
+                    background: #2E8B57;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    margin-top: 16px;
+                }
+                
+                .timestamp {
+                    color: #64748b;
+                    font-size: 14px;
+                    margin-top: 16px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🌍 Afro Nyanka Tours</h1>
+                    <p style="margin: 8px 0 0 0; opacity: 0.9;">New Contact Form Submission</p>
+                </div>
+                
+                <div class="content">
+                    <div class="contact-info">
+                        <div class="info-row">
+                            <span class="info-label">Name:</span>
+                            <span class="info-value">{{ name }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">{{ email }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Subject:</span>
+                            <span class="info-value">{{ subject }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="message-section">
+                        <div class="message-title">Message:</div>
+                        <div class="message-content">{{ message }}</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="mailto:{{ email }}?subject=Re: {{ subject }}" class="reply-button">
+                            Reply to {{ name }}
+                        </a>
+                    </div>
+                    
+                    <div class="timestamp">
+                        Received on {{ current_time }}
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>This message was sent through the Afro Nyanka Tours contact form.</p>
+                    <p>Please respond to the customer's inquiry as soon as possible.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        template = Template(html_template)
+        html_content = template.render(
+            name=name,
+            email=email,
+            subject=subject,
+            message=message,
+            current_time=datetime.now().strftime("%B %d, %Y at %I:%M %p")
+        )
+        
+        return self.send_email(self.admin_email, admin_subject, html_content)
+
 
 email_service = EmailService()

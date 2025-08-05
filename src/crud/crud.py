@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from src.models import models
 from src.schemas import schemas
 from typing import List, Optional, Dict
@@ -17,6 +18,14 @@ def get_tours_by_country(db: Session, country: str) -> List[models.Tour]:
         models.Tour.country.ilike(f"%{country}%"),
         models.Tour.is_active == True
     ).all()
+
+
+def get_countries_with_tours(db: Session) -> List[str]:
+    """Get all unique countries that have active tours"""
+    countries = db.query(models.Tour.country).filter(
+        models.Tour.is_active == True
+    ).distinct().all()
+    return [country[0] for country in countries]
 
 
 def create_tour(db: Session, tour: schemas.TourCreate) -> models.Tour:
@@ -69,6 +78,23 @@ def get_tour_locations(db: Session, tour_id: int) -> List[models.Location]:
     ).all()
 
 
+def get_locations_by_country(db: Session, country: str) -> List[models.Location]:
+    """Get all locations by country in random order"""
+    return db.query(models.Location).filter(
+        models.Location.country.ilike(f"%{country}%")
+    ).order_by(func.random()).all()
+
+
+def get_tour_locations_by_country(db: Session, country: str) -> List[models.Location]:
+    """Get tour locations filtered by country in random order"""
+    return db.query(models.Location).join(
+        models.TourLocation
+    ).filter(
+        # models.TourLocation.tour_id == tour_id,
+        models.Location.country.ilike(f"%{country}%")
+    ).order_by(func.random()).all()
+
+
 def validate_tour_locations(db: Session, tour_selections: List[schemas.BookingTourCreate]) -> bool:
     """Validate that all selected locations belong to their respective tours"""
     for selection in tour_selections:
@@ -106,6 +132,7 @@ def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Bookin
         customer_age=booking.customer_age,
         customer_country=booking.customer_country,
         preferred_date=booking.preferred_date,
+        number_of_people=booking.number_of_people,
         additional_services=booking.additional_services
     )
     db.add(db_booking)
