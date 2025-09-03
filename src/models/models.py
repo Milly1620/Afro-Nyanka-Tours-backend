@@ -62,7 +62,8 @@ class Booking(Base):
     customer_country = Column(String)
     
     # Booking details
-    preferred_date = Column(DateTime)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
     number_of_people = Column(Integer, nullable=False)
     additional_services = Column(Text)
     

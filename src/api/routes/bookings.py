@@ -28,7 +28,7 @@ def create_booking(
         booking_summary = crud.get_booking_summary(db, db_booking)
     
         # Send emails in background
-        background_tasks.add_task(email_service.send_booking_confirmation, db_booking, booking_summary)
+        # background_tasks.add_task(email_service.send_booking_confirmation, db_booking, booking_summary)
         background_tasks.add_task(email_service.send_admin_notification, db_booking, booking_summary)
         
         return schemas.BookingResponse(

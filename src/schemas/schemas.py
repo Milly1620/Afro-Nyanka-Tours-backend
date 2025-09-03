@@ -111,7 +111,8 @@ class BookingBase(BaseModel):
     customer_email: EmailStr
     customer_age: Optional[int] = None
     customer_country: Optional[str] = None
-    preferred_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     additional_services: Optional[str] = None
     number_of_people: int = Field(default=1, description="Number of people in the booking")
 
@@ -126,7 +127,8 @@ class BookingCreate(BookingBase):
                 "customer_email": "john@example.com",
                 "customer_age": 30,
                 "customer_country": "USA",
-                "preferred_date": "2024-06-15T00:00:00",
+                "start_date": "2024-06-15T00:00:00",
+                "end_date": "2024-06-20T00:00:00",
                 "additional_services": "Airport pickup required",
                 "number_of_people": 3,
                 "tour_selections": [
