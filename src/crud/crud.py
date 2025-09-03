@@ -16,7 +16,8 @@ def get_tour(db: Session, tour_id: int) -> Optional[models.Tour]:
 def get_tours_by_country(db: Session, country: str) -> List[models.Tour]:
     return db.query(models.Tour).filter(
         models.Tour.country.ilike(f"%{country}%"),
-        models.Tour.is_active == True
+        models.Tour.is_active == True,
+        models.Tour.is_popular == True
     ).all()
 
 

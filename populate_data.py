@@ -14,41 +14,45 @@ Base.metadata.create_all(bind=engine)
 def create_locations(db: Session):
     """Create predefined locations"""
     locations_data = [
-        # Ghana - Accra
-        {"name": "Independence Square", "country": "Ghana", "region": "Accra"},
-        {"name": "National Museum", "country": "Ghana", "region": "Accra"},
-        {"name": "Makola Market", "country": "Ghana", "region": "Accra"},
-        {"name": "Jamestown", "country": "Ghana", "region": "Accra"},
-        {"name": "Kwame Nkrumah Mausoleum", "country": "Ghana", "region": "Accra"},
-        {"name": "W.E.B Dubois Center", "country": "Ghana", "region": "Accra"},
-        {"name": "Accra Arts Center", "country": "Ghana", "region": "Accra"},
-        {"name": "Chocolate Making Class", "country": "Ghana", "region": "Accra"},
-        {"name": "Aburi Botanical Gardens", "country": "Ghana", "region": "Accra"},
-        {"name": "Waterfall Tour", "country": "Ghana", "region": "Accra"},
-        {"name": "Quad Biking", "country": "Ghana", "region": "Accra"},
+        # Benin - Cotonou
+        {"name": "Cotonou City Tour", "country": "Benin", "region": "Cotonou"},
+        {"name": "Cotonou Village", "country": "Benin", "region": "Cotonou"},
+        {"name": "Voodoo Festival", "country": "Benin", "region": "Cotonou"},
+        {"name": "Place de Martyrs", "country": "Benin", "region": "Cotonou"},
         
-        # Ghana - Cape Coast
-        {"name": "Cape Coast Castle", "country": "Ghana", "region": "Cape Coast"},
-        {"name": "Elmina Castle (Door of No Return)", "country": "Ghana", "region": "Cape Coast"},
-        {"name": "Assin Manso Slave River", "country": "Ghana", "region": "Cape Coast"},
-        {"name": "Kakum Canopy Walk", "country": "Ghana", "region": "Cape Coast"},
-        {"name": "Naming Ceremony", "country": "Ghana", "region": "Cape Coast"},
+        # Cote d'Ivoire - Yamoussokro
+        {"name": "The Basilica of Our Lady of Peace",
+         "country": "Cote d'Ivoire", "region": "Yamoussokro"},
+        {"name": "Palais Presidentiel",
+         "country": "Cote d'Ivoire", "region": "Yamoussokro"},
+        {"name": "Abokouamekro Game Reserve",
+         "country": "Cote d'Ivoire", "region": "Yamoussokro"},
         
-        # Ghana - Kumasi
-        {"name": "Manhyia Palace", "country": "Ghana", "region": "Kumasi"},
-        {"name": "Adawomase", "country": "Ghana", "region": "Kumasi"},
-        {"name": "Ntonso", "country": "Ghana", "region": "Kumasi"},
+        # Cote d'Ivoire - Abidjan
+        {"name": "Abidjan City Tour",
+         "country": "Cote d'Ivoire", "region": "Abidjan"},
+        {"name": "Banco National Park",
+         "country": "Cote d'Ivoire", "region": "Abidjan"},
+        {"name": "Domaine Bini Lagune",
+         "country": "Cote d'Ivoire", "region": "Abidjan"},
         
-        # Ghana - Savannah
-        {"name": "Mole National Park", "country": "Ghana", "region": "Savannah"},
+        # Togo - Lome
+        {"name": "Lome City Tour",
+         "country": "Togo", "region": "Lome"},
+        {"name": "Voodoo Market",
+         "country": "Togo", "region": "Lome"},
         
-        # Other countries
-        {"name": "Voodoo Market", "country": "Togo", "region": "Lomé"},
-        {"name": "Voodoo Market", "country": "Burkina Faso", "region": "Ouagadougou"}
-        # {"name": "Safari Experience", "country": "Kenya", "region": "Nairobi"},
-        # {"name": "Cultural Tour", "country": "Ethiopia", "region": "Addis Ababa"},
-        # {"name": "Wine Tour", "country": "South Africa", "region": "Cape Town"},
-        # {"name": "Mountain Adventure", "country": "Lesotho", "region": "Maseru"},
+        # Burkina Faso - Ouagadougou
+        {"name": "Laongo Sculpture Symposium",
+         "country": "Burkina Faso", "region": "Ouagadougou"},
+        {"name": "Ouagadougou Markets",
+         "country": "Burkina Faso", "region": "Ouagadougou"},
+        {"name": "Reserve de Nazinga",
+         "country": "Burkina Faso", "region": "Ouagadougou"},
+        {"name": "Monument of National Heroes",
+         "country": "Burkina Faso", "region": "Ouagadougou"},
+        {"name": "Cathedral of Ouagadougou",
+         "country": "Burkina Faso", "region": "Ouagadougou"}
     ]
     
     created_locations = {}
@@ -75,76 +79,72 @@ def create_tours(db: Session, location_ids: dict):
     """Create predefined tours"""
     tours_data = [
         {
-            "name": "Accra City Tours",
-            "description": "Explore the vibrant capital of Ghana with visits to historical sites, museums, and cultural centers.",
-            "country": "Ghana",
-            "region": "Accra",
+            "name": "Benin Cotonou Experience",
+            "description": ("Explore the vibrant city of Cotonou with its rich "
+                           "cultural heritage, traditional villages, and "
+                           "spiritual voodoo traditions."),
+            "country": "Benin",
+            "region": "Cotonou",
             "locations": [
-                "Independence Square_Ghana",
-                "National Museum_Ghana",
-                "Makola Market_Ghana",
-                "Jamestown_Ghana",
-                "Kwame Nkrumah Mausoleum_Ghana",
-                "W.E.B Dubois Center_Ghana",
-                "Accra Arts Center_Ghana",
-                "Chocolate Making Class_Ghana",
-                "Aburi Botanical Gardens_Ghana",
-                "Waterfall Tour_Ghana",
-                "Quad Biking_Ghana"
+                "Cotonou City Tour_Benin",
+                "Cotonou Village_Benin",
+                "Voodoo Festival_Benin",
+                "Place de Martyrs_Benin"
             ]
         },
         {
-            "name": "Cape Coast Tours",
-            "description": "Experience the historical significance of Ghana's slave trade history and natural wonders.",
-            "country": "Ghana",
-            "region": "Cape Coast",
+            "name": "Yamoussokro Heritage Tour",
+            "description": ("Discover the political and spiritual heart of "
+                           "Cote d'Ivoire with visits to the world's largest "
+                           "basilica and presidential palace."),
+            "country": "Cote d'Ivoire",
+            "region": "Yamoussokro",
             "locations": [
-                "Cape Coast Castle_Ghana",
-                "Elmina Castle (Door of No Return)_Ghana",
-                "Assin Manso Slave River_Ghana",
-                "Kakum Canopy Walk_Ghana",
-                "Naming Ceremony_Ghana"
+                "The Basilica of Our Lady of Peace_Cote d'Ivoire",
+                "Palais Presidentiel_Cote d'Ivoire",
+                "Abokouamekro Game Reserve_Cote d'Ivoire"
             ]
         },
         {
-            "name": "Kumasi City Tour",
-            "description": "Discover the cultural heart of the Ashanti Kingdom.",
-            "country": "Ghana",
-            "region": "Kumasi",
+            "name": "Abidjan Urban Adventure",
+            "description": ("Experience the economic capital of Cote d'Ivoire "
+                           "with city tours, national parks, and lagoon "
+                           "adventures."),
+            "country": "Cote d'Ivoire",
+            "region": "Abidjan",
             "locations": [
-                "Manhyia Palace_Ghana",
-                "Adawomase_Ghana",
-                "Ntonso_Ghana"
+                "Abidjan City Tour_Cote d'Ivoire",
+                "Banco National Park_Cote d'Ivoire",
+                "Domaine Bini Lagune_Cote d'Ivoire"
             ]
         },
         {
-            "name": "Savannah Region Tour",
-            "description": "Wildlife safari in Ghana's premier national park.",
-            "country": "Ghana",
-            "region": "Savannah",
-            "locations": [
-                "Mole National Park_Ghana"
-            ]
-        },
-        {
-            "name": "Togo Voodoo Experience",
-            "description": "Explore the mystical world of Voodoo culture.",
+            "name": "Togo Lome Discovery",
+            "description": ("Immerse yourself in the coastal charm of Lome "
+                           "with city exploration and mystical voodoo market "
+                           "experiences."),
             "country": "Togo",
-            "region": "Lomé",
+            "region": "Lome",
             "locations": [
+                "Lome City Tour_Togo",
                 "Voodoo Market_Togo"
             ]
         },
         {
-            "name": "Burkina Faso Cultural Tour",
-            "description": "Experience traditional West African culture and Voodoo practices.",
+            "name": "Ouagadougou Cultural Journey",
+            "description": ("Explore the artistic and cultural treasures of "
+                           "Burkina Faso's capital, from sculpture symposiums "
+                           "to national monuments."),
             "country": "Burkina Faso",
             "region": "Ouagadougou",
             "locations": [
-                "Voodoo Market_Burkina Faso"
+                "Laongo Sculpture Symposium_Burkina Faso",
+                "Ouagadougou Markets_Burkina Faso",
+                "Reserve de Nazinga_Burkina Faso",
+                "Monument of National Heroes_Burkina Faso",
+                "Cathedral of Ouagadougou_Burkina Faso"
             ]
         }
-        
     ]
     
     for tour_data in tours_data:

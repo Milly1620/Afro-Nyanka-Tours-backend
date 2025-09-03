@@ -72,3 +72,14 @@ def get_tour_locations(tour_id: int, db: Session = Depends(get_db)):
 def create_location(location: schemas.LocationCreate, db: Session = Depends(get_db)):
     """Create a new location (admin only)"""
     return crud.create_location(db=db, location=location)
+
+@router.patch("/tours/popular/{tour_id}", response_model=schemas.Tour)
+def mark_tour_as_popular(tour_id: int, db: Session = Depends(get_db)):
+    """Mark a tour as popular (admin only)"""
+    tour = crud.get_tour(db, tour_id=tour_id)
+    if tour is None:
+        raise HTTPException(status_code=404, detail="Tour not found")
+    tour.is_popular = True
+    db.commit()
+    db.refresh(tour)
+    return tour
