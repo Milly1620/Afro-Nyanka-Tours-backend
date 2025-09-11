@@ -132,7 +132,8 @@ def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Bookin
         customer_email=booking.customer_email,
         customer_age=booking.customer_age,
         customer_country=booking.customer_country,
-        preferred_date=booking.preferred_date,
+        start_date=booking.start_date,
+        end_date=booking.end_date,
         number_of_people=booking.number_of_people,
         additional_services=booking.additional_services
     )

@@ -142,7 +142,8 @@ class EmailService:
                     
                     <div class="booking-details">
                         <h3>Customer Details:</h3>
-                        <p><strong>Preferred Date:</strong> {{ preferred_date }}</p>
+                        <p><strong>Start Date:</strong> {{ start_date }}</p>
+                        <p><strong>End Date:</strong> {{ end_date }}</p>
                         {% if customer_age %}
                         <p><strong>Age:</strong> {{ customer_age }}</p>
                         {% endif %}
@@ -179,7 +180,8 @@ class EmailService:
         template = Template(html_template)
         html_content = template.render(
             customer_name=booking.customer_name,
-            preferred_date=booking.preferred_date.strftime("%B %d, %Y") if booking.preferred_date else "To be confirmed",
+            start_date=booking.start_date.strftime("%B %d, %Y") if booking.start_date else "To be confirmed",
+            end_date=booking.end_date.strftime("%B %d, %Y") if booking.end_date else "To be confirmed",
             customer_age=booking.customer_age,
             additional_services=booking.additional_services,
             number_of_people=booking.number_of_people,
@@ -436,8 +438,12 @@ class EmailService:
                             <span class="info-value">{{ number_of_people }}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Preferred Date</span>
-                            <span class="info-value">{{ preferred_date }}</span>
+                            <span class="info-label">Start Date</span>
+                            <span class="info-value">{{ start_date }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">End Date</span>
+                            <span class="info-value">{{ end_date }}</span>
                         </div>
                         {% if additional_services %}
                         <div class="info-row">
@@ -482,7 +488,8 @@ class EmailService:
             customer_email=booking.customer_email,
             customer_age=booking.customer_age,
             customer_country=booking.customer_country or "Not provided",
-            preferred_date=booking.preferred_date.strftime("%B %d, %Y") if booking.preferred_date else "Not specified",
+            start_date=booking.start_date.strftime("%B %d, %Y") if booking.start_date else "Not specified",
+            end_date=booking.end_date.strftime("%B %d, %Y") if booking.end_date else "Not specified",
             additional_services=booking.additional_services,
             number_of_people=booking.number_of_people,
             total_tours=booking_summary["total_tours"],
