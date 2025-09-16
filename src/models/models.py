@@ -13,6 +13,8 @@ class Tour(Base):
     country = Column(String, nullable=False)
     region = Column(String)
     is_active = Column(Boolean, default=True)
+    main_image_url = Column(String)  
+    gallery_images = Column(Text) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     is_popular = Column(Boolean, default=False)

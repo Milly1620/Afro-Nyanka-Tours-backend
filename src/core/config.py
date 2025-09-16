@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     smtp_password: Optional[str] = None
     admin_email: Optional[str] = None
     
+    # Cloudinary settings
+    CLOUDINARY_CLOUD_NAME: Optional[str] = None
+    CLOUDINARY_API_KEY: Optional[str] = None
+    CLOUDINARY_API_SECRET: Optional[str] = None
+
     # App settings
     debug: bool = False
     secret_key: str = "your-secret-key-here-change-in-production"

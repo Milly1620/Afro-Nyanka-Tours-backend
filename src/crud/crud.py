@@ -13,7 +13,12 @@ def get_tour(db: Session, tour_id: int) -> Optional[models.Tour]:
     return db.query(models.Tour).filter(models.Tour.id == tour_id, models.Tour.is_active == True).first()
 
 
-def get_tours_by_country(db: Session, country: str) -> List[models.Tour]:
+def get_tours_by_country(db: Session, country: str, is_popular: bool = True) -> List[models.Tour]:
+    if not is_popular:
+        return db.query(models.Tour).filter(
+            models.Tour.country.ilike(f"%{country}%"),
+            models.Tour.is_active == True
+        ).all()
     return db.query(models.Tour).filter(
         models.Tour.country.ilike(f"%{country}%"),
         models.Tour.is_active == True,
@@ -68,6 +73,66 @@ def create_location(db: Session, location: schemas.LocationCreate) -> models.Loc
     db.commit()
     db.refresh(db_location)
     return db_location
+
+
+def update_tour_main_image(db: Session, tour_id: int, image_url: str) -> Optional[models.Tour]:
+    """Update the main image URL for a tour"""
+    tour = db.query(models.Tour).filter(models.Tour.id == tour_id).first()
+    if tour:
+        tour.main_image_url = image_url
+        db.commit()
+        db.refresh(tour)
+    return tour
+
+
+def add_tour_gallery_image(db: Session, tour_id: int, image_url: str) -> Optional[models.Tour]:
+    """Add an image to the tour's gallery"""
+    tour = db.query(models.Tour).filter(models.Tour.id == tour_id).first()
+    if tour:
+        import json
+        # Parse existing gallery images or initialize empty list
+        gallery_images = []
+        if tour.gallery_images:
+            try:
+                gallery_images = json.loads(tour.gallery_images)
+            except json.JSONDecodeError:
+                gallery_images = []
+        
+        # Add new image if not already present
+        if image_url not in gallery_images:
+            gallery_images.append(image_url)
+            tour.gallery_images = json.dumps(gallery_images)
+            db.commit()
+            db.refresh(tour)
+    return tour
+
+
+def update_tour_gallery_images(db: Session, tour_id: int, image_urls: List[str]) -> Optional[models.Tour]:
+    """Replace all gallery images for a tour"""
+    tour = db.query(models.Tour).filter(models.Tour.id == tour_id).first()
+    if tour:
+        import json
+        tour.gallery_images = json.dumps(image_urls)
+        db.commit()
+        db.refresh(tour)
+    return tour
+
+
+def remove_tour_gallery_image(db: Session, tour_id: int, image_url: str) -> Optional[models.Tour]:
+    """Remove a specific image from the tour's gallery"""
+    tour = db.query(models.Tour).filter(models.Tour.id == tour_id).first()
+    if tour and tour.gallery_images:
+        import json
+        try:
+            gallery_images = json.loads(tour.gallery_images)
+            if image_url in gallery_images:
+                gallery_images.remove(image_url)
+                tour.gallery_images = json.dumps(gallery_images)
+                db.commit()
+                db.refresh(tour)
+        except json.JSONDecodeError:
+            pass
+    return tour
 
 
 def get_tour_locations(db: Session, tour_id: int) -> List[models.Location]:

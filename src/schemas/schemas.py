@@ -45,6 +45,8 @@ class TourBase(BaseModel):
     country: str
     region: Optional[str] = None
     is_active: bool = True
+    main_image_url: Optional[str] = None
+    gallery_images: Optional[List[str]] = []
 
 
 class TourCreate(TourBase):
@@ -189,5 +191,51 @@ class ContactResponse(BaseModel):
             "example": {
                 "message": "Your message has been sent successfully! We'll get back to you soon.",
                 "success": True
+            }
+        }
+
+
+class ImageUploadResponse(BaseModel):
+    success: bool
+    message: str
+    image_url: Optional[str] = None
+    public_id: Optional[str] = None
+    image_details: Optional[Dict[str, Any]] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Image uploaded successfully",
+                "image_url": "https://res.cloudinary.com/your-cloud/image/upload/v1234567890/afro-nyanka-tours/tour_image.webp",
+                "public_id": "afro-nyanka-tours/tour_image",
+                "image_details": {
+                    "width": 1200,
+                    "height": 800,
+                    "format": "webp",
+                    "bytes": 245760
+                }
+            }
+        }
+
+
+class MultipleImageUploadResponse(BaseModel):
+    success: bool
+    message: str
+    uploaded_images: List[Dict[str, Any]] = []
+    failed_uploads: List[str] = []
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "3 images uploaded successfully",
+                "uploaded_images": [
+                    {
+                        "url": "https://res.cloudinary.com/your-cloud/image/upload/v1234567890/afro-nyanka-tours/image1.webp",
+                        "public_id": "afro-nyanka-tours/image1"
+                    }
+                ],
+                "failed_uploads": []
             }
         }
