@@ -274,3 +274,201 @@ async def remove_tour_gallery_image(
             status_code=500, 
             detail="An unexpected error occurred while removing the image"
         )
+
+
+@router.post("/{tour_id}/add-location", response_model=schemas.TourLocationResponse)
+def add_location_to_tour(
+    tour_id: int,
+    request: schemas.AddLocationToTourRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Add a location to a tour
+    
+    This endpoint adds a location to the specified tour with an optional order.
+    If no order is specified, the location will be added at the end.
+    """
+    try:
+        # Add location to tour
+        tour_location = crud.add_location_to_tour(
+            db, tour_id, request.location_id, request.order
+        )
+        
+        if not tour_location:
+            raise HTTPException(
+                status_code=404, 
+                detail="Tour or location not found"
+            )
+        
+        logger.info(f"Location {request.location_id} added to tour {tour_id}")
+        
+        return schemas.TourLocationResponse(
+            success=True,
+            message="Location added to tour successfully",
+            tour_location=tour_location
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding location to tour {tour_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while adding the location"
+        )
+
+
+@router.delete("/{tour_id}/remove-location", response_model=dict)
+def remove_location_from_tour(
+    tour_id: int,
+    request: schemas.RemoveLocationFromTourRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Remove a location from a tour
+    
+    This endpoint removes the specified location from the tour.
+    """
+    try:
+        # Remove location from tour
+        success = crud.remove_location_from_tour(db, tour_id, request.location_id)
+        
+        if not success:
+            raise HTTPException(
+                status_code=404, 
+                detail="Tour-location relationship not found"
+            )
+        
+        logger.info(f"Location {request.location_id} removed from tour {tour_id}")
+        
+        return {
+            "success": True,
+            "message": "Location removed from tour successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing location from tour {tour_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while removing the location"
+        )
+
+
+@router.patch("/{tour_id}/update-location-order", response_model=schemas.TourLocationResponse)
+def update_tour_location_order(
+    tour_id: int,
+    request: schemas.UpdateLocationOrderRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Update the order of a location within a tour
+    
+    This endpoint changes the order/position of a location within the tour.
+    """
+    try:
+        # Update location order
+        tour_location = crud.update_tour_location_order(
+            db, tour_id, request.location_id, request.order
+        )
+        
+        if not tour_location:
+            raise HTTPException(
+                status_code=404, 
+                detail="Tour-location relationship not found"
+            )
+        
+        logger.info(f"Location {request.location_id} order updated to {request.order} in tour {tour_id}")
+        
+        return schemas.TourLocationResponse(
+            success=True,
+            message="Location order updated successfully",
+            tour_location=tour_location
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating location order in tour {tour_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while updating the location order"
+        )
+
+
+@router.patch("/{tour_id}/reorder-locations", response_model=dict)
+def reorder_tour_locations(
+    tour_id: int,
+    request: schemas.ReorderTourLocationsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Reorder all locations in a tour
+    
+    This endpoint allows you to reorder multiple locations at once by
+    providing a list of location IDs with their new order positions.
+    """
+    try:
+        # Verify tour exists
+        tour = crud.get_tour(db, tour_id)
+        if not tour:
+            raise HTTPException(status_code=404, detail="Tour not found")
+        
+        # Reorder locations
+        success = crud.reorder_tour_locations(db, tour_id, request.location_orders)
+        
+        if not success:
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to reorder locations"
+            )
+        
+        logger.info(f"Locations reordered for tour {tour_id}")
+        
+        return {
+            "success": True,
+            "message": "Locations reordered successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error reordering locations for tour {tour_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while reordering locations"
+        )
+
+
+@router.get("/{tour_id}/location/{location_id}", response_model=schemas.TourLocation)
+def get_tour_location_relationship(
+    tour_id: int,
+    location_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get the relationship details between a tour and location
+    
+    This endpoint returns information about how a location is associated
+    with a tour, including its order in the tour.
+    """
+    try:
+        tour_location = crud.get_tour_location_relationship(db, tour_id, location_id)
+        
+        if not tour_location:
+            raise HTTPException(
+                status_code=404, 
+                detail="Tour-location relationship not found"
+            )
+        
+        return tour_location
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting tour-location relationship: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred"
+        )

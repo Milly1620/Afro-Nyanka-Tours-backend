@@ -135,6 +135,122 @@ def remove_tour_gallery_image(db: Session, tour_id: int, image_url: str) -> Opti
     return tour
 
 
+def add_location_to_tour(db: Session, tour_id: int, location_id: int, order: int = None) -> Optional[models.TourLocation]:
+    """Add a location to a tour"""
+    # Check if tour exists
+    tour = get_tour(db, tour_id)
+    if not tour:
+        return None
+    
+    # Check if location exists
+    location = get_location(db, location_id)
+    if not location:
+        return None
+    
+    # Check if relationship already exists
+    existing = db.query(models.TourLocation).filter(
+        models.TourLocation.tour_id == tour_id,
+        models.TourLocation.location_id == location_id
+    ).first()
+    
+    if existing:
+        return existing  # Already exists, return existing relationship
+    
+    # Determine order if not provided
+    if order is None:
+        max_order = db.query(func.max(models.TourLocation.order)).filter(
+            models.TourLocation.tour_id == tour_id
+        ).scalar()
+        order = (max_order or 0) + 1
+    
+    # Create new tour-location relationship
+    tour_location = models.TourLocation(
+        tour_id=tour_id,
+        location_id=location_id,
+        order=order
+    )
+    
+    db.add(tour_location)
+    db.commit()
+    db.refresh(tour_location)
+    return tour_location
+
+
+def remove_location_from_tour(db: Session, tour_id: int, location_id: int) -> bool:
+    """Remove a location from a tour"""
+    # Find the relationship
+    tour_location = db.query(models.TourLocation).filter(
+        models.TourLocation.tour_id == tour_id,
+        models.TourLocation.location_id == location_id
+    ).first()
+    
+    if not tour_location:
+        return False  # Relationship doesn't exist
+    
+    # Delete the relationship
+    db.delete(tour_location)
+    db.commit()
+    return True
+
+
+def update_tour_location_order(db: Session, tour_id: int, location_id: int, new_order: int) -> Optional[models.TourLocation]:
+    """Update the order of a location within a tour"""
+    tour_location = db.query(models.TourLocation).filter(
+        models.TourLocation.tour_id == tour_id,
+        models.TourLocation.location_id == location_id
+    ).first()
+    
+    if not tour_location:
+        return None
+    
+    tour_location.order = new_order
+    db.commit()
+    db.refresh(tour_location)
+    return tour_location
+
+
+def get_tour_location_relationship(db: Session, tour_id: int, location_id: int) -> Optional[models.TourLocation]:
+    """Get the tour-location relationship"""
+    return db.query(models.TourLocation).filter(
+        models.TourLocation.tour_id == tour_id,
+        models.TourLocation.location_id == location_id
+    ).first()
+
+
+def reorder_tour_locations(db: Session, tour_id: int, location_orders: List[Dict[str, int]]) -> bool:
+    """
+    Reorder locations in a tour
+    
+    Args:
+        tour_id: ID of the tour
+        location_orders: List of dicts with 'location_id' and 'order' keys
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        for item in location_orders:
+            location_id = item.get('location_id')
+            order = item.get('order')
+            
+            if location_id is None or order is None:
+                continue
+                
+            tour_location = db.query(models.TourLocation).filter(
+                models.TourLocation.tour_id == tour_id,
+                models.TourLocation.location_id == location_id
+            ).first()
+            
+            if tour_location:
+                tour_location.order = order
+        
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        return False
+
+
 def get_tour_locations(db: Session, tour_id: int) -> List[models.Location]:
     """Get all locations available for a specific tour"""
     return db.query(models.Location).join(

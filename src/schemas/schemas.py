@@ -74,6 +74,85 @@ class CountriesResponse(BaseModel):
         }
 
 
+# Tour-Location Management Schemas
+class AddLocationToTourRequest(BaseModel):
+    location_id: int = Field(..., description="ID of the location to add")
+    order: Optional[int] = Field(None, description="Order of the location in the tour (auto-assigned if not provided)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "location_id": 5,
+                "order": 3
+            }
+        }
+
+
+class RemoveLocationFromTourRequest(BaseModel):
+    location_id: int = Field(..., description="ID of the location to remove")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "location_id": 5
+            }
+        }
+
+
+class UpdateLocationOrderRequest(BaseModel):
+    location_id: int = Field(..., description="ID of the location")
+    order: int = Field(..., description="New order position")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "location_id": 5,
+                "order": 2
+            }
+        }
+
+
+class ReorderTourLocationsRequest(BaseModel):
+    location_orders: List[Dict[str, int]] = Field(..., description="List of location IDs with their new orders")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "location_orders": [
+                    {"location_id": 1, "order": 1},
+                    {"location_id": 3, "order": 2},
+                    {"location_id": 5, "order": 3}
+                ]
+            }
+        }
+
+
+class TourLocationResponse(BaseModel):
+    success: bool
+    message: str
+    tour_location: Optional[TourLocation] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Location added to tour successfully",
+                "tour_location": {
+                    "id": 10,
+                    "location_id": 5,
+                    "order": 3,
+                    "location": {
+                        "id": 5,
+                        "name": "Cape Coast Castle",
+                        "description": "Historic slave castle",
+                        "country": "Ghana",
+                        "region": "Central Region"
+                    }
+                }
+            }
+        }
+
+
 # New schemas for multi-tour/location booking
 class BookingLocationCreate(BaseModel):
     location_id: int
