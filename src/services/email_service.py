@@ -1,4 +1,5 @@
 import httpx
+from typing import Optional
 from jinja2 import Template
 from src.core.config import settings
 from src.schemas.schemas import Booking
@@ -24,8 +25,20 @@ class EmailService:
         self.sender_name = settings.sender_name
         self.admin_email = settings.admin_email
 
-    def send_email(self, to_email: str, subject: str, html_content: str):
-        """Send email using the Brevo transactional email API"""
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        reply_to_email: Optional[str] = None,
+        reply_to_name: Optional[str] = None,
+    ):
+        """Send email using the Brevo transactional email API.
+
+        The From address must stay on our verified domain, so when a reply_to
+        contact is given (e.g. the customer) it is shown as the sender name and
+        set as Reply-To, so replying goes straight to them.
+        """
         try:
             # Check if email configuration is properly set
             if not self.brevo_api_key:
@@ -38,15 +51,24 @@ class EmailService:
             
             logger.info(f"Attempting to send email to {to_email} via Brevo")
             
+            sender_name = self.sender_name
+            payload = {
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content,
+            }
+            if reply_to_email:
+                reply_to = {"email": reply_to_email}
+                if reply_to_name:
+                    reply_to["name"] = reply_to_name
+                    sender_name = f"{reply_to_name} via {self.sender_name}"
+                payload["replyTo"] = reply_to
+            payload["sender"] = {"name": sender_name, "email": self.sender_email}
+            
             response = httpx.post(
                 self.BREVO_SEND_URL,
                 headers={"api-key": self.brevo_api_key, "accept": "application/json"},
-                json={
-                    "sender": {"name": self.sender_name, "email": self.sender_email},
-                    "to": [{"email": to_email}],
-                    "subject": subject,
-                    "htmlContent": html_content,
-                },
+                json=payload,
                 timeout=15,
             )
             
@@ -163,7 +185,13 @@ class EmailService:
             tours_and_locations=booking_summary["tours_and_locations"]
         )
         
-        return self.send_email(booking.customer_email, subject, html_content)
+        # Replies from the customer go to the admin inbox rather than the sender address
+        return self.send_email(
+            booking.customer_email,
+            subject,
+            html_content,
+            reply_to_email=self.admin_email,
+        )
 
     def send_admin_notification(self, booking: Booking, booking_summary: dict):
         """Send booking notification email to admin"""
@@ -471,7 +499,13 @@ class EmailService:
             current_time=datetime.now().strftime("%B %d, %Y at %I:%M %p")
         )
         
-        return self.send_email(self.admin_email, subject, html_content)
+        return self.send_email(
+            self.admin_email,
+            subject,
+            html_content,
+            reply_to_email=booking.customer_email,
+            reply_to_name=booking.customer_name,
+        )
 
     def send_contact_form_email(self, name: str, email: str, subject: str, message: str):
         """Send contact form email to admin"""
@@ -651,7 +685,13 @@ class EmailService:
             current_time=datetime.now().strftime("%B %d, %Y at %I:%M %p")
         )
         
-        return self.send_email(self.admin_email, admin_subject, html_content)
+        return self.send_email(
+            self.admin_email,
+            admin_subject,
+            html_content,
+            reply_to_email=email,
+            reply_to_name=name,
+        )
 
 
 email_service = EmailService()
