@@ -6,10 +6,8 @@ services:
     container_name: afro_tours_web
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - SMTP_SERVER=smtp.gmail.com
-      - SMTP_PORT=465
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - SENDER_EMAIL=${SENDER_EMAIL:-info@afronyankatours.com}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}

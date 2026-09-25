@@ -1,6 +1,4 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import httpx
 from jinja2 import Template
 from src.core.config import settings
 from src.schemas.schemas import Booking
@@ -18,75 +16,50 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService:
+    BREVO_SEND_URL = "https://api.brevo.com/v3/smtp/email"
+
     def __init__(self):
-        self.smtp_server = settings.smtp_server
-        self.smtp_port = settings.smtp_port
-        self.smtp_username = settings.smtp_username
-        self.smtp_password = settings.smtp_password
+        self.brevo_api_key = settings.brevo_api_key
+        self.sender_email = settings.sender_email
+        self.sender_name = settings.sender_name
         self.admin_email = settings.admin_email
 
     def send_email(self, to_email: str, subject: str, html_content: str):
-        """Send email using Gmail SMTP"""
+        """Send email using the Brevo transactional email API"""
         try:
             # Check if email configuration is properly set
-            if not self.smtp_username or not self.smtp_password:
-                logger.error("Email configuration missing: SMTP_USERNAME or SMTP_PASSWORD not set")
+            if not self.brevo_api_key:
+                logger.error("Email configuration missing: BREVO_API_KEY not set")
                 return False
             
             if not self.admin_email:
                 logger.error("Admin email not configured")
                 return False
             
-            logger.info(f"Attempting to send email to {to_email}")
-            logger.info(f"Using SMTP server: {self.smtp_server}:{self.smtp_port}")
-            logger.info(f"SMTP username: {self.smtp_username}")
+            logger.info(f"Attempting to send email to {to_email} via Brevo")
             
-            message = MIMEMultipart("alternative")
-            message["Subject"] = subject
-            message["From"] = self.smtp_username
-            message["To"] = to_email
-
-            html_part = MIMEText(html_content, "html")
-            message.attach(html_part)
-
-            # Try with SMTP_SSL first (port 465), then fallback to STARTTLS (port 587)
-            try:
-                # Use SMTP_SSL for port 465
-                if self.smtp_port == 465:
-                    logger.info("Using SMTP_SSL on port 465...")
-                    with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port) as server:
-                        server.set_debuglevel(0)  # Disable debug to reduce noise
-                        logger.info("Logging in...")
-                        server.login(self.smtp_username, self.smtp_password)
-                        logger.info("Sending email...")
-                        server.sendmail(self.smtp_username, to_email, message.as_string())
-                else:
-                    # Use STARTTLS for port 587
-                    logger.info("Using STARTTLS on port 587...")
-                    with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                        server.set_debuglevel(0)  # Disable debug to reduce noise
-                        logger.info("Starting TLS...")
-                        server.starttls()
-                        logger.info("Logging in...")
-                        server.login(self.smtp_username, self.smtp_password)
-                        logger.info("Sending email...")
-                        server.sendmail(self.smtp_username, to_email, message.as_string())
-                        
-            except smtplib.SMTPAuthenticationError as e:
-                logger.error(f"SMTP Authentication failed: {str(e)}")
-                logger.error("Please check your Gmail App Password. Make sure 2FA is enabled and you're using an App Password, not your regular password.")
-                return False
-            except smtplib.SMTPConnectError as e:
-                logger.error(f"SMTP Connection failed: {str(e)}")
-                logger.error("Cannot connect to Gmail SMTP server. Check your internet connection.")
-                return False
-            except smtplib.SMTPServerDisconnected as e:
-                logger.error(f"SMTP Server disconnected: {str(e)}")
+            response = httpx.post(
+                self.BREVO_SEND_URL,
+                headers={"api-key": self.brevo_api_key, "accept": "application/json"},
+                json={
+                    "sender": {"name": self.sender_name, "email": self.sender_email},
+                    "to": [{"email": to_email}],
+                    "subject": subject,
+                    "htmlContent": html_content,
+                },
+                timeout=15,
+            )
+            
+            if response.status_code >= 400:
+                logger.error(f"Brevo API error {response.status_code} sending to {to_email}: {response.text}")
                 return False
             
-            logger.info(f"Email sent successfully to {to_email}")
+            logger.info(f"Email sent successfully to {to_email} (messageId: {response.json().get('messageId')})")
             return True
             
+        except httpx.HTTPError as e:
+            logger.error(f"Brevo request failed sending email to {to_email}: {str(e)}")
+            return False
         except Exception as e:
             logger.error(f"Unexpected error sending email to {to_email}: {str(e)}")
             return False

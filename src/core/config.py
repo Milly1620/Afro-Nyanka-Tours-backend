@@ -8,10 +8,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str 
     
     # Email settings
-    smtp_server: str = "smtp.gmail.com"
-    smtp_port: int = 465
-    smtp_username: Optional[str] = None
-    smtp_password: Optional[str] = None
+    brevo_api_key: Optional[str] = None
+    sender_email: str = "info@afronyankatours.com"
+    sender_name: str = "Afro Nyanka Tours"
     admin_email: Optional[str] = None
     
     # Cloudinary settings
