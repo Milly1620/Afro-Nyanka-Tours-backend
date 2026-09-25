@@ -9,7 +9,7 @@ A FastAPI-based backend for the Afro Nyanka Tours booking platform. This API han
 - **Email Notifications**: Automated confirmation emails for customers and admin notifications
 - **PostgreSQL Database**: Robust data storage with Alembic migrations
 - **Docker Support**: Containerized application for easy deployment
-- **Google SMTP Integration**: Professional email delivery
+- **Brevo Integration**: Transactional email delivery via the Brevo API
 
 ## Tech Stack
 
@@ -83,18 +83,17 @@ cp .env.example .env
 
 Edit `.env` file with your configuration:
 ```env
-SMTP_USERNAME=your_gmail@gmail.com
-SMTP_PASSWORD=your_app_password
+BREVO_API_KEY=your_brevo_api_key
+SENDER_EMAIL=info@afronyankatours.com
 ADMIN_EMAIL=admin@afro-nyanka-tours.com
 DATABASE_URL=postgresql://afro_user:afro_password@localhost:5432/afro_tours_db
 DEBUG=True
 SECRET_KEY=your-secret-key-here-change-in-production
 ```
 
-**Note**: For Gmail SMTP, you need to:
-1. Enable 2-factor authentication on your Gmail account
-2. Generate an App Password (not your regular password)
-3. Use the App Password in the `SMTP_PASSWORD` field
+**Note**: Emails are sent through Brevo. You need to:
+1. Create an API key in Brevo (SMTP & API → API Keys) and set it as `BREVO_API_KEY`
+2. Verify the `SENDER_EMAIL` address (or its domain) as a sender in Brevo
 
 ### 3. Start the Application
 ```bash
@@ -129,8 +128,8 @@ pip install -r requirements.txt
 
 # Set up environment variables
 export DATABASE_URL="postgresql://afro_user:afro_password@localhost:5432/afro_tours_db"
-export SMTP_USERNAME="your_gmail@gmail.com"
-export SMTP_PASSWORD="your_app_password"
+export BREVO_API_KEY="your_brevo_api_key"
+export SENDER_EMAIL="info@afronyankatours.com"
 export ADMIN_EMAIL="admin@afro-nyanka-tours.com"
 
 # Run database migrations
@@ -222,7 +221,7 @@ curl -X GET "http://localhost:8000/api/tours/country/Ghana"
   - Use environment variables for sensitive data
 
 - **Email Security**:
-  - Use App Passwords for Gmail
+  - Keep the Brevo API key out of source control
   - Store credentials securely
   - Monitor email sending limits
 
