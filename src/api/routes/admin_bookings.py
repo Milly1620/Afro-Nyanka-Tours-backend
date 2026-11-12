@@ -14,17 +14,9 @@ from src.schemas.admin_schemas import (
     AdminBookingListItem,
     BookingStatusUpdate,
 )
-from src.services.booking_status import BOOKING_STATUSES, booking_reference, change_status
+from src.services.booking_status import BOOKING_STATUSES, booking_display_name, booking_reference, change_status
 
 router = APIRouter(dependencies=[Depends(require_admin)])
-
-
-def booking_display_name(booking: models.Booking) -> Optional[str]:
-    """What the booking is for: the event, or the first tour by order."""
-    if booking.event is not None:
-        return booking.event.name
-    tours = sorted(booking.booking_tours, key=lambda bt: (bt.order or 0, bt.id))
-    return tours[0].tour.name if tours else None
 
 
 def _to_item(b: models.Booking) -> AdminBookingListItem:
