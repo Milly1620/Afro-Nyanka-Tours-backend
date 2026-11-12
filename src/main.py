@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import settings
-from src.api.routes import tours, bookings, analytics, contact, admin_auth, admin_tours, admin_bookings, admin_extras, admin_events, events, admin_dashboard
+from src.api.routes import tours, bookings, analytics, contact, admin_auth, admin_tours, admin_bookings, admin_extras, admin_events, events, admin_dashboard, admin_settings
 from src.database.database import SessionLocal
 from src.models import models, admin  # noqa: F401  (register tables)
 from src.services.admin_bootstrap import run_startup_sync
@@ -46,6 +46,9 @@ app.include_router(admin_extras.router, prefix="/api/admin/extras", tags=["admin
 app.include_router(admin_events.router, prefix="/api/admin/events", tags=["admin-events"])
 app.include_router(events.router, prefix="/api/events", tags=["events"])
 app.include_router(admin_dashboard.router, prefix="/api/admin/dashboard", tags=["admin-dashboard"])
+app.include_router(admin_settings.router, prefix="/api/admin/settings", tags=["admin-settings"])
+app.include_router(admin_settings.public_router, prefix="/api/settings", tags=["settings"])
+app.include_router(admin_settings.reports_router, prefix="/api/admin/reports", tags=["admin-reports"])
 
 @app.get("/")
 async def root():

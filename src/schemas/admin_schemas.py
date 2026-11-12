@@ -197,3 +197,31 @@ class AdminEvent(PublicEvent):
 class AdminEventList(BaseModel):
     items: List[AdminEvent]
     counts: Dict[str, int]
+
+
+class SiteSettingsPublic(BaseModel):
+    company_name: str
+    logo_url: Optional[str] = None
+    contact_email: str
+    phone: Optional[str] = None
+    location: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SiteSettingsAdmin(SiteSettingsPublic):
+    notify_new_inquiry: bool
+    notify_booking_confirmation: bool
+    notify_weekly_summary: bool
+    updated_at: Optional[datetime] = None
+
+
+class SiteSettingsUpdate(BaseModel):
+    company_name: Optional[str] = Field(None, min_length=1)
+    contact_email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    notify_new_inquiry: Optional[bool] = None
+    notify_booking_confirmation: Optional[bool] = None
+    notify_weekly_summary: Optional[bool] = None

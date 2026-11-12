@@ -6,6 +6,7 @@ from src.api.deps import require_admin
 from src.schemas import schemas
 from src.crud import crud
 from src.services.email_service import email_service
+from src.services.site_settings import company_context, get_site_settings
 
 router = APIRouter()
 
@@ -33,9 +34,14 @@ def create_booking(
         # Get booking summary for emails
         booking_summary = crud.get_booking_summary(db, db_booking)
     
-        # Send emails in background
-        background_tasks.add_task(email_service.send_booking_confirmation, db_booking, booking_summary)
-        background_tasks.add_task(email_service.send_admin_notification, db_booking, booking_summary)
+        # Send emails in background, as enabled in admin settings
+        site = get_site_settings(db)
+        if site.notify_booking_confirmation:
+            background_tasks.add_task(
+                email_service.send_booking_confirmation, db_booking, booking_summary, company_context(site)
+            )
+        if site.notify_new_inquiry:
+            background_tasks.add_task(email_service.send_admin_notification, db_booking, booking_summary)
         
         return schemas.BookingResponse(
             booking=db_booking,

@@ -92,6 +92,7 @@ SECRET_KEY=your-secret-key-here-change-in-production
 ADMIN_EMAILS=owner@example.com
 FRONTEND_URL=http://localhost:3000
 CORS_ORIGINS=https://afronyankatours.com
+CRON_SECRET=a-long-random-string
 ```
 
 **Admin accounts**: admins are managed through `ADMIN_EMAILS` (comma-separated). On startup the API
@@ -192,6 +193,17 @@ The system sends two types of emails upon booking:
    - Customer contact information
    - Complete booking details
    - Action required notification
+
+## Weekly Summary Email
+
+The admin's weekly summary is sent when something calls the endpoint below with the shared
+`CRON_SECRET`. On Render, add a Cron Job (e.g. every Monday 08:00, `0 8 * * 1`) running:
+
+```bash
+curl -fsS -X POST -H "X-Cron-Secret: $CRON_SECRET" https://<api-host>/api/admin/reports/weekly-summary
+```
+
+It is sent to `ADMIN_EMAIL`, only while "Weekly summary email" is switched on in admin Settings.
 
 ## API Usage Examples
 

@@ -105,7 +105,7 @@ class EmailService:
             logger.error(f"Unexpected error sending email to {to_email}: {str(e)}")
             return False
 
-    def send_booking_confirmation(self, booking: Booking, booking_summary: dict):
+    def send_booking_confirmation(self, booking: Booking, booking_summary: dict, company: Optional[dict] = None):
         """Send booking confirmation email to customer"""
         event = booking_summary.get("event")
         subject = (
@@ -201,7 +201,10 @@ class EmailService:
                     <p>If you have any questions, please don't hesitate to contact us.</p>
                 </div>
                 <div class="footer">
-                    <p>Best regards,<br>Afro Nyanka Tours Team</p>
+                    <p>Best regards,<br>{{ company.company_name }} Team</p>
+                    {% if company.phone %}<p>{{ company.phone }}</p>{% endif %}
+                    {% if company.contact_email %}<p>{{ company.contact_email }}</p>{% endif %}
+                    {% if company.location %}<p>{{ company.location }}</p>{% endif %}
                 </div>
             </div>
         </body>
@@ -220,6 +223,7 @@ class EmailService:
             total_locations=booking_summary["total_locations"],
             tours_and_locations=booking_summary["tours_and_locations"],
             **_price_context(booking_summary),
+            company=company or {"company_name": "Afro Nyanka Tours"},
         )
         
         # Replies from the customer go to the admin inbox rather than the sender address
@@ -746,6 +750,38 @@ class EmailService:
             html_content,
             reply_to_email=email,
             reply_to_name=name,
+        )
+
+    def send_weekly_summary(self, to_email: str, metrics: dict) -> bool:
+        """Weekly business summary for the admin (triggered by cron)."""
+        template = Template("""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 560px; margin: 0 auto; padding: 24px;">
+                <h2 style="color: #E8772E;">Your weekly summary</h2>
+                <p><strong>New inquiries (pending):</strong> {{ m.new_inquiries.count }}
+                   ({{ m.new_inquiries.delta_7d }} in the last 7 days)</p>
+                <p><strong>Upcoming departures:</strong> {{ m.upcoming_departures.count }}
+                   ({{ m.upcoming_departures.next_14d }} in the next 14 days)</p>
+                <p><strong>Revenue (paid):</strong> GHS {{ "{:,}".format(m.revenue_ghs.total) }}</p>
+                <p><strong>Average occupancy:</strong>
+                   {% if m.avg_occupancy_pct.value is not none %}{{ m.avg_occupancy_pct.value }}%{% else %}n/a{% endif %}</p>
+                {% if m.inquiries %}
+                <h3>Inquiries to respond to</h3>
+                <ul>
+                {% for i in m.inquiries %}
+                    <li>{{ i.reference }} - {{ i.customer_name|e }}{% if i.tour_or_event_name %} - {{ i.tour_or_event_name|e }}{% endif %}</li>
+                {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+        </body>
+        </html>
+        """)
+        return self.send_email(
+            to_email=to_email,
+            subject="Afro Nyanka Tours - weekly summary",
+            html_content=template.render(m=metrics),
         )
 
     def send_password_link(self, to_email: str, link: str, purpose: str) -> bool:

@@ -281,3 +281,23 @@ class EventLocation(Base):
 
     event = relationship("Event", back_populates="event_locations")
     location = relationship("Location", lazy="joined")
+
+
+class SiteSettings(Base):
+    """Single-row (id=1) company profile and notification preferences."""
+
+    __tablename__ = "site_settings"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_site_settings_singleton"),)
+
+    id = Column(Integer, primary_key=True, default=1)
+    company_name = Column(String, nullable=False, server_default="Afro Nyanka Tours", default="Afro Nyanka Tours")
+    logo_url = Column(String)
+    contact_email = Column(
+        String, nullable=False, server_default="info@afronyankatours.com", default="info@afronyankatours.com"
+    )
+    phone = Column(String)
+    location = Column(String)
+    notify_new_inquiry = Column(Boolean, nullable=False, server_default="true", default=True)
+    notify_booking_confirmation = Column(Boolean, nullable=False, server_default="true", default=True)
+    notify_weekly_summary = Column(Boolean, nullable=False, server_default="true", default=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

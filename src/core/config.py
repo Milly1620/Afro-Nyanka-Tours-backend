@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # Admin portal
     admin_emails: str = ""  # comma-separated; synced to admin_users on startup
     frontend_url: str = "http://localhost:3000"
-    cron_secret: Optional[str] = None
+    cron_secret: Optional[str] = None  # shared secret for the weekly-summary cron call
     cors_origins: str = "*"  # comma-separated list of allowed origins
 
     @property
