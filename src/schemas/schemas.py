@@ -1,6 +1,6 @@
 import json
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -250,9 +250,16 @@ class BookingCreate(BookingBase):
 
 class Booking(BookingBase):
     id: int
+    status: str = "pending"
+    amount_ghs: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     booking_locations: List[BookingLocation] = []
+
+    @computed_field
+    @property
+    def reference(self) -> str:
+        return f"BC-{self.id}"
 
     class Config:
         from_attributes = True

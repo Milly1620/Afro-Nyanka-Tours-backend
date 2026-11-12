@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import settings
-from src.api.routes import tours, bookings, analytics, contact, admin_auth, admin_tours
+from src.api.routes import tours, bookings, analytics, contact, admin_auth, admin_tours, admin_bookings
 from src.database.database import SessionLocal
 from src.models import models, admin  # noqa: F401  (register tables)
 from src.services.admin_bootstrap import run_startup_sync
@@ -41,6 +41,7 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(contact.router, prefix="/api/contact", tags=["contact"])
 app.include_router(admin_auth.router, prefix="/api/admin/auth", tags=["admin-auth"])
 app.include_router(admin_tours.router, prefix="/api/admin/tours", tags=["admin-tours"])
+app.include_router(admin_bookings.router, prefix="/api/admin/bookings", tags=["admin-bookings"])
 
 @app.get("/")
 async def root():

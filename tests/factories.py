@@ -30,3 +30,26 @@ def attach_location(db, tour, location, order=1) -> models.TourLocation:
 
 def hours(n: float) -> datetime:
     return datetime.now(timezone.utc) + timedelta(hours=n)
+
+
+def make_booking(db, tour=None, **overrides) -> models.Booking:
+    values = dict(customer_name="Daniel Osei", customer_email="daniel@example.com", number_of_people=2)
+    values.update(overrides)
+    booking = models.Booking(**values)
+    db.add(booking)
+    db.flush()
+    if tour is not None:
+        db.add(models.BookingTour(booking_id=booking.id, tour_id=tour.id, order=1))
+        db.flush()
+    return booking
+
+
+def booking_payload(tour, location_ids=(), **overrides) -> dict:
+    body = {
+        "customer_name": "Millicent Kweku Jones",
+        "customer_email": "millie@example.com",
+        "number_of_people": 4,
+        "tour_selections": [{"tour_id": tour.id, "locations": list(location_ids), "order": 1}],
+    }
+    body.update(overrides)
+    return body

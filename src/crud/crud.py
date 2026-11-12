@@ -3,6 +3,7 @@ from sqlalchemy import func
 from src.models import models
 from src.schemas import schemas
 from src.services.visibility import visible_filter
+from src.services.booking_status import record_created
 from typing import List, Optional, Dict
 
 
@@ -327,6 +328,7 @@ def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Bookin
     )
     db.add(db_booking)
     db.flush()  # Get the booking ID
+    record_created(db, db_booking)
     
     # Add selected tours to booking
     for selection in booking.tour_selections:

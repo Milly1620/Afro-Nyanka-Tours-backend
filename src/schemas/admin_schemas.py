@@ -3,7 +3,7 @@ from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from src.schemas.schemas import Tour
+from src.schemas.schemas import Booking, Tour
 
 PublishStatus = Literal["draft", "published", "scheduled"]
 
@@ -75,3 +75,33 @@ class AdminTour(Tour):
 class AdminTourList(BaseModel):
     items: List[AdminTour]
     counts: Dict[str, int]
+
+
+BookingStatus = Literal["pending", "confirmed", "paid", "cancelled"]
+
+
+class BookingStatusUpdate(BaseModel):
+    status: BookingStatus
+
+
+class AdminBookingListItem(BaseModel):
+    id: int
+    reference: str
+    customer_name: str
+    customer_email: str
+    tour_or_event_name: Optional[str] = None
+    start_date: Optional[datetime] = None
+    number_of_people: int
+    amount_ghs: Optional[int] = None
+    status: str
+    created_at: datetime
+
+
+class AdminBookingList(BaseModel):
+    items: List[AdminBookingListItem]
+    counts: Dict[str, int]
+
+
+class AdminBookingDetail(BaseModel):
+    booking: Booking
+    summary: dict

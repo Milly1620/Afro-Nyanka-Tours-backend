@@ -65,6 +65,11 @@ class TourLocation(Base):
 
 class Booking(Base):
     __tablename__ = "bookings"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'confirmed', 'paid', 'cancelled')", name="ck_bookings_status"
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     
@@ -79,7 +84,11 @@ class Booking(Base):
     end_date = Column(DateTime)
     number_of_people = Column(Integer, nullable=False)
     additional_services = Column(Text)
-    
+
+    # Status workflow (set manually by the admin) and amount frozen at booking time
+    status = Column(String(16), nullable=False, server_default="pending", default="pending")
+    amount_ghs = Column(Integer)
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -87,6 +96,7 @@ class Booking(Base):
     # Relationships
     booking_tours = relationship("BookingTour", back_populates="booking")
     booking_locations = relationship("BookingLocation", back_populates="booking")
+    events = relationship("BookingEvent", back_populates="booking", order_by="BookingEvent.id")
 
 
 class BookingTour(Base):
@@ -115,3 +125,21 @@ class BookingLocation(Base):
     booking = relationship("Booking", back_populates="booking_locations")
     location = relationship("Location", back_populates="booking_locations")
     tour = relationship("Tour")
+
+
+class BookingEvent(Base):
+    """History of a booking: creation and every status change (dashboard activity)."""
+
+    __tablename__ = "booking_events"
+    __table_args__ = (
+        CheckConstraint("type IN ('created', 'status_changed')", name="ck_booking_events_type"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False, index=True)
+    type = Column(String(32), nullable=False)
+    from_status = Column(String(16))
+    to_status = Column(String(16), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+    booking = relationship("Booking", back_populates="events")
