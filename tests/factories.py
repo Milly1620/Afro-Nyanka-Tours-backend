@@ -74,3 +74,21 @@ def price_extra(db, extra, tour=None, event=None, price_ghs=3500) -> models.Extr
     db.add(row)
     db.flush()
     return row
+
+
+def days(n: int):
+    from datetime import date, timedelta
+
+    return date.today() + timedelta(days=n)
+
+
+def make_event(db, **overrides) -> models.Event:
+    values = dict(
+        name="Homowo Festival 2026", country="Ghana", region="Greater Accra", destination="Accra, Ghana",
+        start_date=days(30), end_date=days(32), price_ghs=5000, status="published",
+    )
+    values.update(overrides)
+    event = models.Event(**values)
+    db.add(event)
+    db.flush()
+    return event

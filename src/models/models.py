@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, CheckConstraint, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Boolean, Float, CheckConstraint, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.database.database import Base
@@ -98,6 +98,7 @@ class Booking(Base):
     # Status workflow (set manually by the admin) and amount frozen at booking time
     status = Column(String(16), nullable=False, server_default="pending", default="pending")
     amount_ghs = Column(Integer)
+    event_id = Column(Integer, ForeignKey("events.id"), index=True)  # set for event bookings
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -108,6 +109,7 @@ class Booking(Base):
     booking_locations = relationship("BookingLocation", back_populates="booking")
     events = relationship("BookingEvent", back_populates="booking", order_by="BookingEvent.id")
     booking_extras = relationship("BookingExtra", back_populates="booking", order_by="BookingExtra.id")
+    event = relationship("Event")
 
 
 class BookingTour(Base):
@@ -199,11 +201,12 @@ class ExtraPrice(Base):
     id = Column(Integer, primary_key=True)
     extra_id = Column(Integer, ForeignKey("extras.id"), nullable=False, index=True)
     tour_id = Column(Integer, ForeignKey("tours.id"), index=True)
-    event_id = Column(Integer, index=True)  # FK to events.id added with the events table
+    event_id = Column(Integer, ForeignKey("events.id"), index=True)
     price_ghs = Column(Integer, nullable=False)
 
     extra = relationship("Extra", back_populates="prices", lazy="joined")
     tour = relationship("Tour", back_populates="extra_prices")
+    event = relationship("Event", back_populates="extra_prices")
 
 
 class BookingExtra(Base):
@@ -215,8 +218,66 @@ class BookingExtra(Base):
     booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False, index=True)
     extra_id = Column(Integer, ForeignKey("extras.id"), nullable=False)
     tour_id = Column(Integer, ForeignKey("tours.id"))
-    event_id = Column(Integer)  # FK to events.id added with the events table
+    event_id = Column(Integer, ForeignKey("events.id"))
     name = Column(String, nullable=False)
     price_ghs = Column(Integer, nullable=False)
 
     booking = relationship("Booking", back_populates="booking_extras")
+
+
+class Event(Base):
+    """A fixed-date trip (e.g. a festival). capacity NULL = unlimited seats."""
+
+    __tablename__ = "events"
+    __table_args__ = (
+        CheckConstraint("status IN ('draft', 'published', 'scheduled')", name="ck_events_status"),
+        CheckConstraint("end_date >= start_date", name="ck_events_dates"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    country = Column(String, nullable=False)
+    region = Column(String)
+    destination = Column(String)
+    start_date = Column(Date, nullable=False, index=True)
+    end_date = Column(Date, nullable=False)
+    duration_days = Column(Integer)
+    price_ghs = Column(Integer)
+    capacity = Column(Integer)
+    highlights = Column(JSON, nullable=False, server_default="[]", default=list)
+    main_image_url = Column(String)
+    gallery_images = Column(Text)  # JSON-encoded list, same as tours
+    status = Column(String(16), nullable=False, server_default="draft", default="draft")
+    publish_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    event_locations = relationship(
+        "EventLocation", back_populates="event", order_by="EventLocation.order", lazy="selectin"
+    )
+    extra_prices = relationship("ExtraPrice", back_populates="event", lazy="selectin")
+
+    @property
+    def locations(self) -> list["Location"]:
+        return [el.location for el in self.event_locations]
+
+    @property
+    def extras(self) -> list[dict]:
+        return [e for e in self.all_extras if e["is_active"]]
+
+    @property
+    def all_extras(self) -> list[dict]:
+        return extra_price_rows(self.extra_prices)
+
+
+class EventLocation(Base):
+    __tablename__ = "event_locations"
+
+    id = Column(Integer, primary_key=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False, index=True)
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    order = Column(Integer, default=1)
+
+    event = relationship("Event", back_populates="event_locations")
+    location = relationship("Location", lazy="joined")

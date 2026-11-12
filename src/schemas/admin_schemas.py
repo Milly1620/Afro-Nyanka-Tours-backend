@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
-from src.schemas.schemas import Booking, Tour
+from src.schemas.schemas import Booking, PublicEvent, Tour
 
 PublishStatus = Literal["draft", "published", "scheduled"]
 
@@ -143,3 +143,57 @@ class ExtraOut(BaseModel):
 
 class AttachExtraRequest(BaseModel):
     price_ghs: Optional[int] = Field(None, ge=0)
+
+
+class AdminEventCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    country: str = Field(..., min_length=1)
+    region: Optional[str] = None
+    destination: Optional[str] = None
+    start_date: date
+    end_date: date
+    duration_days: Optional[int] = Field(None, ge=1)
+    price_ghs: Optional[int] = Field(None, ge=0)
+    capacity: Optional[int] = Field(None, ge=1)
+    highlights: List[str] = []
+    status: PublishStatus = "draft"
+    publish_at: Optional[datetime] = None
+    location_ids: List[int] = []
+
+    @model_validator(mode="after")
+    def _dates_in_order(self):
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self
+
+
+class AdminEventUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1)
+    description: Optional[str] = None
+    country: Optional[str] = Field(None, min_length=1)
+    region: Optional[str] = None
+    destination: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    duration_days: Optional[int] = Field(None, ge=1)
+    price_ghs: Optional[int] = Field(None, ge=0)
+    capacity: Optional[int] = Field(None, ge=1)
+    highlights: Optional[List[str]] = None
+    status: Optional[PublishStatus] = None
+    publish_at: Optional[datetime] = None
+    location_ids: Optional[List[int]] = None
+
+
+class AdminEvent(PublicEvent):
+    status: str
+    publish_at: Optional[datetime] = None
+    seats_booked: int = 0
+    extras: List[AdminExtraPrice] = Field(default=[], validation_alias="all_extras")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+class AdminEventList(BaseModel):
+    items: List[AdminEvent]
+    counts: Dict[str, int]

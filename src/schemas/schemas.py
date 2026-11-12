@@ -2,7 +2,20 @@ import json
 
 from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator, model_validator
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import date, datetime
+
+
+def parse_gallery(value):
+    """gallery_images columns store a JSON-encoded list as text."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except ValueError:
+            return [value]
+        return parsed if isinstance(parsed, list) else []
+    return value
 
 
 class LocationBase(BaseModel):
@@ -57,16 +70,7 @@ class TourBase(BaseModel):
     @field_validator("gallery_images", mode="before")
     @classmethod
     def _parse_gallery_json(cls, value):
-        # The column stores a JSON-encoded list as text.
-        if value is None:
-            return []
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value)
-            except ValueError:
-                return [value]
-            return parsed if isinstance(parsed, list) else []
-        return value
+        return parse_gallery(value)
 
 
 class PublicExtra(BaseModel):
@@ -367,3 +371,28 @@ class MultipleImageUploadResponse(BaseModel):
                 "failed_uploads": []
             }
         }
+
+
+class PublicEvent(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    country: str
+    region: Optional[str] = None
+    destination: Optional[str] = None
+    start_date: date
+    end_date: date
+    duration_days: Optional[int] = None
+    price_ghs: Optional[int] = None
+    capacity: Optional[int] = None
+    highlights: List[str] = []
+    main_image_url: Optional[str] = None
+    gallery_images: List[str] = []
+    locations: List[Location] = []
+    extras: List[PublicExtra] = []
+    seats_left: Optional[int] = None
+
+    _parse_gallery = field_validator("gallery_images", mode="before")(lambda cls, v: parse_gallery(v))
+
+    class Config:
+        from_attributes = True
