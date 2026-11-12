@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from src.database.database import get_db
+from src.api.deps import require_admin
 from src.schemas import schemas
 from src.crud import crud
 from src.services.email_service import email_service
@@ -42,7 +43,7 @@ def create_booking(
         raise HTTPException(status_code=500, detail=f"Failed to create booking: {str(e)}")
 
 
-@router.get("/{booking_id}", response_model=schemas.Booking)
+@router.get("/{booking_id}", response_model=schemas.Booking, dependencies=[Depends(require_admin)])
 def get_booking(booking_id: int, db: Session = Depends(get_db)):
     """Get a booking by ID"""
     booking = crud.get_booking(db, booking_id=booking_id)
@@ -51,7 +52,7 @@ def get_booking(booking_id: int, db: Session = Depends(get_db)):
     return booking
 
 
-@router.get("/{booking_id}/summary")
+@router.get("/{booking_id}/summary", dependencies=[Depends(require_admin)])
 def get_booking_summary(booking_id: int, db: Session = Depends(get_db)):
     """Get a detailed summary of a booking"""
     booking = crud.get_booking(db, booking_id=booking_id)
@@ -66,13 +67,13 @@ def get_booking_summary(booking_id: int, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/", response_model=List[schemas.Booking])
+@router.get("/", response_model=List[schemas.Booking], dependencies=[Depends(require_admin)])
 def get_bookings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all bookings (admin only)"""
     return crud.get_bookings(db, skip=skip, limit=limit)
 
 
-@router.post("/test-email")
+@router.post("/test-email", dependencies=[Depends(require_admin)])
 def test_email():
     """Test email configuration"""
     try:

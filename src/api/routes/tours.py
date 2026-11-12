@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
 from src.database.database import get_db
+from src.api.deps import require_admin
 from src.schemas import schemas
 from src.crud import crud
 from src.services.cloudinary_service import cloudinary_service
@@ -42,7 +43,7 @@ def get_countries_with_tours(db: Session = Depends(get_db)):
     return schemas.CountriesResponse(countries=countries)
 
 
-@router.post("/", response_model=schemas.Tour)
+@router.post("/", response_model=schemas.Tour, dependencies=[Depends(require_admin)])
 def create_tour(tour: schemas.TourCreate, db: Session = Depends(get_db)):
     """Create a new tour (admin only)"""
     return crud.create_tour(db=db, tour=tour)
@@ -72,12 +73,12 @@ def get_tour_locations(tour_id: int, db: Session = Depends(get_db)):
     return crud.get_tour_locations(db, tour_id=tour_id)
 
 
-@router.post("/locations/", response_model=schemas.Location)
+@router.post("/locations/", response_model=schemas.Location, dependencies=[Depends(require_admin)])
 def create_location(location: schemas.LocationCreate, db: Session = Depends(get_db)):
     """Create a new location (admin only)"""
     return crud.create_location(db=db, location=location)
 
-@router.patch("/tours/popular/{tour_id}", response_model=schemas.Tour)
+@router.patch("/tours/popular/{tour_id}", response_model=schemas.Tour, dependencies=[Depends(require_admin)])
 def mark_tour_as_popular(tour_id: int, db: Session = Depends(get_db)):
     """Mark a tour as popular (admin only)"""
     tour = crud.get_tour(db, tour_id=tour_id)
@@ -89,7 +90,7 @@ def mark_tour_as_popular(tour_id: int, db: Session = Depends(get_db)):
     return tour
 
 
-@router.post("/{tour_id}/upload-main-image", response_model=schemas.ImageUploadResponse)
+@router.post("/{tour_id}/upload-main-image", response_model=schemas.ImageUploadResponse, dependencies=[Depends(require_admin)])
 async def upload_tour_main_image(
     tour_id: int,
     file: UploadFile = File(..., description="Main image for the tour"),
@@ -157,7 +158,7 @@ async def upload_tour_main_image(
         )
 
 
-@router.post("/{tour_id}/upload-gallery-images", response_model=schemas.MultipleImageUploadResponse)
+@router.post("/{tour_id}/upload-gallery-images", response_model=schemas.MultipleImageUploadResponse, dependencies=[Depends(require_admin)])
 async def upload_tour_gallery_images(
     tour_id: int,
     files: List[UploadFile] = File(..., description="Gallery images for the tour"),
@@ -227,7 +228,7 @@ async def upload_tour_gallery_images(
         )
 
 
-@router.delete("/{tour_id}/remove-gallery-image")
+@router.delete("/{tour_id}/remove-gallery-image", dependencies=[Depends(require_admin)])
 async def remove_tour_gallery_image(
     tour_id: int,
     image_url: str = Form(..., description="URL of the image to remove"),
@@ -276,7 +277,7 @@ async def remove_tour_gallery_image(
         )
 
 
-@router.post("/{tour_id}/add-location", response_model=schemas.TourLocationResponse)
+@router.post("/{tour_id}/add-location", response_model=schemas.TourLocationResponse, dependencies=[Depends(require_admin)])
 def add_location_to_tour(
     tour_id: int,
     request: schemas.AddLocationToTourRequest,
@@ -318,7 +319,7 @@ def add_location_to_tour(
         )
 
 
-@router.delete("/{tour_id}/remove-location", response_model=dict)
+@router.delete("/{tour_id}/remove-location", response_model=dict, dependencies=[Depends(require_admin)])
 def remove_location_from_tour(
     tour_id: int,
     request: schemas.RemoveLocationFromTourRequest,
@@ -356,7 +357,7 @@ def remove_location_from_tour(
         )
 
 
-@router.patch("/{tour_id}/update-location-order", response_model=schemas.TourLocationResponse)
+@router.patch("/{tour_id}/update-location-order", response_model=schemas.TourLocationResponse, dependencies=[Depends(require_admin)])
 def update_tour_location_order(
     tour_id: int,
     request: schemas.UpdateLocationOrderRequest,
@@ -397,7 +398,7 @@ def update_tour_location_order(
         )
 
 
-@router.patch("/{tour_id}/reorder-locations", response_model=dict)
+@router.patch("/{tour_id}/reorder-locations", response_model=dict, dependencies=[Depends(require_admin)])
 def reorder_tour_locations(
     tour_id: int,
     request: schemas.ReorderTourLocationsRequest,

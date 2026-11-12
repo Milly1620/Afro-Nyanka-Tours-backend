@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     admin_emails: str = ""  # comma-separated; synced to admin_users on startup
     frontend_url: str = "http://localhost:3000"
     cron_secret: Optional[str] = None
+    cors_origins: str = "*"  # comma-separated list of allowed origins
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()] or ["*"]
 
     @model_validator(mode="after")
     def _reject_default_secret_in_prod(self):

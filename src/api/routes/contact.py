@@ -1,4 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from src.api.deps import require_admin
 from src.schemas.schemas import ContactForm, ContactResponse
 from src.services.email_service import email_service
 import logging
@@ -54,7 +55,7 @@ def send_contact_email(
         )
 
 
-@router.post("/test", response_model=ContactResponse)
+@router.post("/test", response_model=ContactResponse, dependencies=[Depends(require_admin)])
 def test_contact_email():
     """
     Test contact form email functionality (for development/testing)

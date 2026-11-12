@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from src.database.database import get_db
+from src.api.deps import require_admin
 from src.services.analytics_service import AnalyticsService
 from src.schemas.analytics_schemas import (
     ComprehensiveAnalytics, AnalyticsOverviewResponse, BookingTrendsResponse,
@@ -16,7 +17,7 @@ import csv
 import io
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 def convert_to_csv(data: dict, metric: str) -> str:

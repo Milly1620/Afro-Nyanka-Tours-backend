@@ -91,6 +91,7 @@ DEBUG=True
 SECRET_KEY=your-secret-key-here-change-in-production
 ADMIN_EMAILS=owner@example.com
 FRONTEND_URL=http://localhost:3000
+CORS_ORIGINS=https://afronyankatours.com
 ```
 
 **Admin accounts**: admins are managed through `ADMIN_EMAILS` (comma-separated). On startup the API
@@ -225,7 +226,7 @@ curl -X GET "http://localhost:8000/api/tours/country/Ghana"
   - Change default database credentials
   - Use strong secret keys
   - Enable HTTPS
-  - Configure CORS properly
+  - Set `CORS_ORIGINS` to the frontend's origin(s) (defaults to `*`)
   - Use environment variables for sensitive data
 
 - **Admin API**: admin routes require `Authorization: Bearer <token>` from
