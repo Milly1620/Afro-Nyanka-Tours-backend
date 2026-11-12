@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
-from src.core.security import decode_access_token
+from src.core.security import decode_access_claims, password_stamp
 from src.database.database import get_db
 from src.models.admin import AdminUser
 
@@ -25,10 +25,10 @@ def require_admin(
     if creds is None:
         raise _unauthorized()
     try:
-        admin_id = decode_access_token(creds.credentials)
+        admin_id, stamp = decode_access_claims(creds.credentials)
     except JWTError:
         raise _unauthorized()
     admin = db.get(AdminUser, admin_id)
-    if admin is None or not admin.is_active:
+    if admin is None or not admin.is_active or stamp != password_stamp(admin.password_changed_at):
         raise _unauthorized()
     return admin

@@ -15,7 +15,7 @@ from src.schemas.admin_schemas import (
 )
 from src.services.admin_bootstrap import issue_password_link, normalise_email
 from src.services.email_service import email_service
-from src.services.rate_limit import login_rate_limiter
+from src.services.rate_limit import email_rate_limiter, login_rate_limiter
 
 router = APIRouter()
 
@@ -23,26 +23,39 @@ router = APIRouter()
 _DUMMY_HASH = hash_password("dummy-password-for-timing")
 
 
+def client_ip(request: Request) -> str:
+    """Client IP for rate limiting.
+
+    Render's proxy appends the connecting IP to X-Forwarded-For, so only the
+    rightmost entry is trustworthy; anything to its left is client-supplied.
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        last = forwarded.split(",")[-1].strip()
+        if last:
+            return last
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, request: Request, db: Session = Depends(get_db)):
     email = normalise_email(body.email)
-    client_ip = request.client.host if request.client else "unknown"
-    key = f"{email}|{client_ip}"
-    login_rate_limiter.check(key)
+    ip_key = f"{email}|{client_ip(request)}"
+    login_rate_limiter.begin([ip_key])
+    email_rate_limiter.begin([email])
 
     admin = db.scalar(select(AdminUser).where(AdminUser.email == email))
     if admin is None or not admin.is_active or not admin.password_hash:
         verify_password(body.password, _DUMMY_HASH)
-        login_rate_limiter.fail(key)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     if not verify_password(body.password, admin.password_hash):
-        login_rate_limiter.fail(key)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
-    login_rate_limiter.reset(key)
+    login_rate_limiter.reset(ip_key)
+    email_rate_limiter.succeed([email])
     admin.last_login_at = _now()
     db.commit()
-    token, expires_in = create_access_token(admin.id, body.remember_me)
+    token, expires_in = create_access_token(admin.id, body.remember_me, admin.password_changed_at)
     return TokenResponse(access_token=token, expires_in=expires_in)
 
 
@@ -75,7 +88,11 @@ def set_password(body: SetPasswordRequest, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This link is invalid or has expired")
 
-    db.execute(update(AdminUser).where(AdminUser.id == admin_id).values(password_hash=hash_password(body.password)))
+    db.execute(
+        update(AdminUser)
+        .where(AdminUser.id == admin_id)
+        .values(password_hash=hash_password(body.password), password_changed_at=now)
+    )
     db.execute(
         update(PasswordToken)
         .where(PasswordToken.admin_id == admin_id, PasswordToken.used_at.is_(None))

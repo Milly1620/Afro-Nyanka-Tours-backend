@@ -5,6 +5,7 @@ from typing import Optional
 
 
 DEFAULT_SECRET_KEY = "your-secret-key-here-change-in-production"
+MIN_SECRET_KEY_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -37,9 +38,15 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()] or ["*"]
 
     @model_validator(mode="after")
-    def _reject_default_secret_in_prod(self):
-        if not self.debug and self.secret_key == DEFAULT_SECRET_KEY:
-            raise ValueError("SECRET_KEY must be set to a real secret when DEBUG is false")
+    def _require_real_config_in_prod(self):
+        if self.debug:
+            return self
+        if self.secret_key == DEFAULT_SECRET_KEY or len(self.secret_key or "") < MIN_SECRET_KEY_LENGTH:
+            raise ValueError(
+                f"SECRET_KEY must be a real secret of at least {MIN_SECRET_KEY_LENGTH} characters when DEBUG is false"
+            )
+        if not (self.frontend_url or "").strip():
+            raise ValueError("FRONTEND_URL must be set when DEBUG is false (used in admin password links)")
         return self
     
     class Config:

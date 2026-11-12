@@ -3,7 +3,7 @@ import os
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql://postgres:test@localhost:5439/postgres"
 )
-os.environ["SECRET_KEY"] = "test-secret"
+os.environ["SECRET_KEY"] = "test-secret-key-that-is-at-least-32-chars"
 os.environ.setdefault("BREVO_API_KEY", "test-brevo-key")
 os.environ.setdefault("ADMIN_EMAIL", "ops@example.com")
 
@@ -66,11 +66,13 @@ def db(session_factory):
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    from src.services.rate_limit import login_rate_limiter
+    from src.services.rate_limit import email_rate_limiter, login_rate_limiter
 
-    login_rate_limiter.reset_all()
+    for limiter in (login_rate_limiter, email_rate_limiter):
+        limiter.reset_all()
     yield
-    login_rate_limiter.reset_all()
+    for limiter in (login_rate_limiter, email_rate_limiter):
+        limiter.reset_all()
 
 
 @pytest.fixture

@@ -38,6 +38,7 @@ def price_booking(
     tour_ids = [t.id for t in tours]
     snapshots: list[models.BookingExtra] = []
     extras_total = 0
+    seen: set[tuple] = set()
     for selection in booking_in.extras:
         if event is not None:
             if selection.tour_id is not None or selection.event_id not in (None, event.id):
@@ -52,6 +53,13 @@ def price_booking(
                 raise _unavailable(selection.extra_id)
             owner_filter = models.ExtraPrice.tour_id == tour_id
             event_id = None
+        key = (selection.extra_id, tour_id, event_id)
+        if key in seen:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Each extra can only be selected once",
+            )
+        seen.add(key)
         price = db.scalar(
             select(models.ExtraPrice)
             .join(models.Extra)

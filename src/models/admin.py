@@ -13,6 +13,7 @@ class AdminUser(Base):
     is_active = Column(Boolean, nullable=False, server_default="true", default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login_at = Column(DateTime(timezone=True))
+    password_changed_at = Column(DateTime(timezone=True))  # tokens issued before this are rejected
 
 
 class PasswordToken(Base):

@@ -10,7 +10,7 @@ services:
       - SENDER_EMAIL=${SENDER_EMAIL:-info@afronyankatours.com}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_EMAILS=${ADMIN_EMAILS}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - CRON_SECRET=${CRON_SECRET}
       - SECRET_KEY=${SECRET_KEY}

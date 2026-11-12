@@ -99,7 +99,8 @@ CRON_SECRET=a-long-random-string
 creates an account for each new email and emails it a one-time set-password link
 (`{FRONTEND_URL}/admin/set-password?token=...`, valid 24 hours). Removing an email deactivates that
 admin on the next startup; an empty `ADMIN_EMAILS` leaves existing admins unchanged. "Forgot password"
-sends the same kind of link. With `DEBUG=False` the app refuses to start unless `SECRET_KEY` is set.
+sends the same kind of link, and setting a new password signs out every existing session. With `DEBUG=False`
+the app refuses to start unless `SECRET_KEY` is at least 32 characters and `FRONTEND_URL` is set.
 
 **Note**: Emails are sent through Brevo. You need to:
 1. Create an API key in Brevo (SMTP & API → API Keys) and set it as `BREVO_API_KEY`
@@ -242,7 +243,8 @@ curl -X GET "http://localhost:8000/api/tours/country/Ghana"
   - Use environment variables for sensitive data
 
 - **Admin API**: admin routes require `Authorization: Bearer <token>` from
-  `POST /api/admin/auth/login`. Failed logins are rate-limited (5 per 15 minutes per email + IP).
+  `POST /api/admin/auth/login`. Login attempts are rate-limited: 5 failures per 15 minutes per email + IP
+  (rightmost `X-Forwarded-For` entry), and 20 per 15 minutes per email across all IPs.
 
 - **Email Security**:
   - Keep the Brevo API key out of source control

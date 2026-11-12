@@ -38,7 +38,7 @@ def test_expired_token_rejected(monkeypatch):
 
 def test_jwt_sub_is_string():
     token, _ = create_access_token(7, False)
-    claims = jwt.decode(token, "test-secret", algorithms=["HS256"])
+    claims = jwt.decode(token, "test-secret-key-that-is-at-least-32-chars", algorithms=["HS256"])
     assert claims["sub"] == "7"
 
 
