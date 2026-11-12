@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 import src.models
 from src.models.models import Base
-from src.models import models, analytics
+from src.models import models, analytics, admin
 from src.core.config import settings
 from src.models.models import Tour, Location, TourLocation, Booking, BookingTour, BookingLocation
 from src.models.analytics import TourPopularity, LocationPopularity, CustomerDemographics

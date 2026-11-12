@@ -1,6 +1,10 @@
 import os
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
+
+
+DEFAULT_SECRET_KEY = "your-secret-key-here-change-in-production"
 
 
 class Settings(BaseSettings):
@@ -20,7 +24,18 @@ class Settings(BaseSettings):
 
     # App settings
     debug: bool = False
-    secret_key: str = "your-secret-key-here-change-in-production"
+    secret_key: str = DEFAULT_SECRET_KEY
+
+    # Admin portal
+    admin_emails: str = ""  # comma-separated; synced to admin_users on startup
+    frontend_url: str = "http://localhost:3000"
+    cron_secret: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _reject_default_secret_in_prod(self):
+        if not self.debug and self.secret_key == DEFAULT_SECRET_KEY:
+            raise ValueError("SECRET_KEY must be set to a real secret when DEBUG is false")
+        return self
     
     class Config:
         env_file = ".env"
