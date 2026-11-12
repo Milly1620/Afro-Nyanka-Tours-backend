@@ -1,4 +1,11 @@
+from datetime import datetime
+from typing import Dict, List, Literal, Optional
+
 from pydantic import BaseModel, EmailStr, Field
+
+from src.schemas.schemas import Tour
+
+PublishStatus = Literal["draft", "published", "scheduled"]
 
 
 class LoginRequest(BaseModel):
@@ -25,3 +32,46 @@ class SetPasswordRequest(BaseModel):
 class AdminMe(BaseModel):
     id: int
     email: EmailStr
+
+
+class AdminTourCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    country: str = Field(..., min_length=1)
+    region: Optional[str] = None
+    price_ghs: Optional[int] = Field(None, ge=0)
+    duration_days: Optional[int] = Field(None, ge=1)
+    capacity: Optional[int] = Field(None, ge=1)
+    highlights: List[str] = []
+    status: PublishStatus = "draft"
+    publish_at: Optional[datetime] = None
+    is_popular: bool = False
+    location_ids: List[int] = []
+
+
+class AdminTourUpdate(BaseModel):
+    """Partial update: only fields present in the request are changed."""
+
+    name: Optional[str] = Field(None, min_length=1)
+    description: Optional[str] = None
+    country: Optional[str] = Field(None, min_length=1)
+    region: Optional[str] = None
+    price_ghs: Optional[int] = Field(None, ge=0)
+    duration_days: Optional[int] = Field(None, ge=1)
+    capacity: Optional[int] = Field(None, ge=1)
+    highlights: Optional[List[str]] = None
+    status: Optional[PublishStatus] = None
+    publish_at: Optional[datetime] = None
+    is_popular: Optional[bool] = None
+    location_ids: Optional[List[int]] = None
+
+
+class AdminTour(Tour):
+    status: str
+    publish_at: Optional[datetime] = None
+    is_popular: Optional[bool] = None
+
+
+class AdminTourList(BaseModel):
+    items: List[AdminTour]
+    counts: Dict[str, int]

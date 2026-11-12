@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+import json
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -51,6 +53,20 @@ class TourBase(BaseModel):
     duration_days: Optional[int] = None
     capacity: Optional[int] = None
     highlights: List[str] = []
+
+    @field_validator("gallery_images", mode="before")
+    @classmethod
+    def _parse_gallery_json(cls, value):
+        # The column stores a JSON-encoded list as text.
+        if value is None:
+            return []
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except ValueError:
+                return [value]
+            return parsed if isinstance(parsed, list) else []
+        return value
 
 
 class TourCreate(TourBase):
