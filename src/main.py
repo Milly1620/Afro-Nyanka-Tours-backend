@@ -5,8 +5,6 @@ from src.api.routes import tours, bookings, analytics, contact
 from src.database.database import engine
 from src.models import models
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Afro Nyanka Tours API",
