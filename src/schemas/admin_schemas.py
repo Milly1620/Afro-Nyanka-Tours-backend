@@ -66,10 +66,19 @@ class AdminTourUpdate(BaseModel):
     location_ids: Optional[List[int]] = None
 
 
+class AdminExtraPrice(BaseModel):
+    extra_id: int
+    name: str
+    description: Optional[str] = None
+    price_ghs: int
+    is_active: bool
+
+
 class AdminTour(Tour):
     status: str
     publish_at: Optional[datetime] = None
     is_popular: Optional[bool] = None
+    extras: List[AdminExtraPrice] = Field(default=[], validation_alias="all_extras")
 
 
 class AdminTourList(BaseModel):
@@ -105,3 +114,32 @@ class AdminBookingList(BaseModel):
 class AdminBookingDetail(BaseModel):
     booking: Booking
     summary: dict
+
+
+class ExtraCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    default_price_ghs: Optional[int] = Field(None, ge=0)
+
+
+class ExtraUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1)
+    description: Optional[str] = None
+    default_price_ghs: Optional[int] = Field(None, ge=0)
+    is_active: Optional[bool] = None
+
+
+class ExtraOut(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    default_price_ghs: Optional[int] = None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AttachExtraRequest(BaseModel):
+    price_ghs: Optional[int] = Field(None, ge=0)

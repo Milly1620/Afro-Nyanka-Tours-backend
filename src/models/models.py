@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, CheckConstraint, JSON
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, CheckConstraint, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.database.database import Base
@@ -33,6 +33,16 @@ class Tour(Base):
     # Relationships
     tour_locations = relationship("TourLocation", back_populates="tour")
     booking_tours = relationship("BookingTour", back_populates="tour")
+    extra_prices = relationship("ExtraPrice", back_populates="tour", lazy="selectin")
+
+    @property
+    def extras(self) -> list[dict]:
+        """Active extras with this tour's price (what customers can pick)."""
+        return [e for e in self.all_extras if e["is_active"]]
+
+    @property
+    def all_extras(self) -> list[dict]:
+        return extra_price_rows(self.extra_prices)
 
 
 class Location(Base):
@@ -143,3 +153,53 @@ class BookingEvent(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
     booking = relationship("Booking", back_populates="events")
+
+
+def extra_price_rows(prices) -> list[dict]:
+    rows = [
+        {
+            "extra_id": p.extra.id,
+            "name": p.extra.name,
+            "description": p.extra.description,
+            "price_ghs": p.price_ghs,
+            "is_active": p.extra.is_active,
+        }
+        for p in prices
+    ]
+    return sorted(rows, key=lambda r: (r["name"].lower(), r["extra_id"]))
+
+
+class Extra(Base):
+    """Shared catalog of paid add-ons; priced per tour/event via ExtraPrice."""
+
+    __tablename__ = "extras"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(Text)
+    default_price_ghs = Column(Integer)
+    is_active = Column(Boolean, nullable=False, server_default="true", default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    prices = relationship("ExtraPrice", back_populates="extra")
+
+
+class ExtraPrice(Base):
+    """An extra attached to exactly one tour or one event, at that offering's price."""
+
+    __tablename__ = "extra_prices"
+    __table_args__ = (
+        CheckConstraint("num_nonnulls(tour_id, event_id) = 1", name="ck_extra_prices_one_owner"),
+        CheckConstraint("price_ghs >= 0", name="ck_extra_prices_price_nonnegative"),
+        UniqueConstraint("extra_id", "tour_id", name="uq_extra_prices_extra_tour"),
+        UniqueConstraint("extra_id", "event_id", name="uq_extra_prices_extra_event"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    extra_id = Column(Integer, ForeignKey("extras.id"), nullable=False, index=True)
+    tour_id = Column(Integer, ForeignKey("tours.id"), index=True)
+    event_id = Column(Integer, index=True)  # FK to events.id added with the events table
+    price_ghs = Column(Integer, nullable=False)
+
+    extra = relationship("Extra", back_populates="prices", lazy="joined")
+    tour = relationship("Tour", back_populates="extra_prices")

@@ -69,6 +69,13 @@ class TourBase(BaseModel):
         return value
 
 
+class PublicExtra(BaseModel):
+    extra_id: int
+    name: str
+    description: Optional[str] = None
+    price_ghs: int
+
+
 class TourCreate(TourBase):
     location_ids: List[int] = []
 
@@ -78,6 +85,7 @@ class Tour(TourBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     tour_locations: List[TourLocation] = []
+    extras: List[PublicExtra] = []
 
     class Config:
         from_attributes = True

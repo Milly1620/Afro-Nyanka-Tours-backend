@@ -53,3 +53,24 @@ def booking_payload(tour, location_ids=(), **overrides) -> dict:
     }
     body.update(overrides)
     return body
+
+
+def make_extra(db, **overrides) -> models.Extra:
+    values = dict(name="Hot-air balloon safari", description="Sunrise flight over the plains")
+    values.update(overrides)
+    extra = models.Extra(**values)
+    db.add(extra)
+    db.flush()
+    return extra
+
+
+def price_extra(db, extra, tour=None, event=None, price_ghs=3500) -> models.ExtraPrice:
+    row = models.ExtraPrice(
+        extra_id=extra.id,
+        tour_id=tour.id if tour else None,
+        event_id=event.id if event else None,
+        price_ghs=price_ghs,
+    )
+    db.add(row)
+    db.flush()
+    return row

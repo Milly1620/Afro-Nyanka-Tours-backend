@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from src.api.deps import require_admin
 from src.database.database import get_db
 from src.models import analytics, models
-from src.schemas.admin_schemas import AdminTour, AdminTourCreate, AdminTourList, AdminTourUpdate
+from src.api.routes.admin_extras import attach_extra, detach_extra, get_extra_or_404
+from src.schemas.admin_schemas import AdminTour, AdminTourCreate, AdminTourList, AdminTourUpdate, AttachExtraRequest
 from src.services.visibility import PUBLISH_STATUSES, assert_publishable
 
 router = APIRouter(dependencies=[Depends(require_admin)])
@@ -110,9 +111,25 @@ def delete_tour(tour_id: int, db: Session = Depends(get_db)):
             detail="This tour has bookings and can't be deleted. Set it to draft to hide it instead.",
         )
     db.execute(delete(models.TourLocation).where(models.TourLocation.tour_id == tour.id))
+    db.execute(delete(models.ExtraPrice).where(models.ExtraPrice.tour_id == tour.id))
     db.execute(delete(analytics.TourPopularity).where(analytics.TourPopularity.tour_id == tour.id))
     for table in (analytics.MonthlyBookingStats, analytics.CustomerDemographics):
         db.execute(update(table).where(table.most_popular_tour_id == tour.id).values(most_popular_tour_id=None))
     db.delete(tour)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/{tour_id}/extras/{extra_id}", response_model=AdminTour)
+def attach_tour_extra(tour_id: int, extra_id: int, body: AttachExtraRequest, db: Session = Depends(get_db)):
+    tour = _get_or_404(db, tour_id)
+    attach_extra(db, get_extra_or_404(db, extra_id), body, tour_id=tour.id)
+    db.refresh(tour)
+    return tour
+
+
+@router.delete("/{tour_id}/extras/{extra_id}", status_code=status.HTTP_204_NO_CONTENT)
+def detach_tour_extra(tour_id: int, extra_id: int, db: Session = Depends(get_db)):
+    tour = _get_or_404(db, tour_id)
+    detach_extra(db, extra_id, tour_id=tour.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
