@@ -2,26 +2,33 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from src.models import models
 from src.schemas import schemas
+from src.services.visibility import visible_filter
 from typing import List, Optional, Dict
 
 
 def get_tours(db: Session, skip: int = 0, limit: int = 100) -> List[models.Tour]:
-    return db.query(models.Tour).filter(models.Tour.is_active == True).offset(skip).limit(limit).all()
+    return db.query(models.Tour).filter(visible_filter(models.Tour)).offset(skip).limit(limit).all()
 
 
 def get_tour(db: Session, tour_id: int) -> Optional[models.Tour]:
-    return db.query(models.Tour).filter(models.Tour.id == tour_id, models.Tour.is_active == True).first()
+    """Public lookup: only tours visible on the site."""
+    return db.query(models.Tour).filter(models.Tour.id == tour_id, visible_filter(models.Tour)).first()
+
+
+def get_tour_any(db: Session, tour_id: int) -> Optional[models.Tour]:
+    """Admin lookup: any status, including drafts."""
+    return db.get(models.Tour, tour_id)
 
 
 def get_tours_by_country(db: Session, country: str, is_popular: bool = True) -> List[models.Tour]:
     if not is_popular:
         return db.query(models.Tour).filter(
             models.Tour.country.ilike(f"%{country}%"),
-            models.Tour.is_active == True
+            visible_filter(models.Tour)
         ).all()
     return db.query(models.Tour).filter(
         models.Tour.country.ilike(f"%{country}%"),
-        models.Tour.is_active == True,
+        visible_filter(models.Tour),
         models.Tour.is_popular == True
     ).all()
 
@@ -29,7 +36,7 @@ def get_tours_by_country(db: Session, country: str, is_popular: bool = True) -> 
 def get_countries_with_tours(db: Session) -> List[str]:
     """Get all unique countries that have active tours"""
     countries = db.query(models.Tour.country).filter(
-        models.Tour.is_active == True
+        visible_filter(models.Tour)
     ).distinct().all()
     return [country[0] for country in countries]
 
@@ -138,7 +145,7 @@ def remove_tour_gallery_image(db: Session, tour_id: int, image_url: str) -> Opti
 def add_location_to_tour(db: Session, tour_id: int, location_id: int, order: int = None) -> Optional[models.TourLocation]:
     """Add a location to a tour"""
     # Check if tour exists
-    tour = get_tour(db, tour_id)
+    tour = get_tour_any(db, tour_id)
     if not tour:
         return None
     

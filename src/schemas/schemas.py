@@ -47,6 +47,10 @@ class TourBase(BaseModel):
     is_active: bool = True
     main_image_url: Optional[str] = None
     gallery_images: Optional[List[str]] = []
+    price_ghs: Optional[int] = None
+    duration_days: Optional[int] = None
+    capacity: Optional[int] = None
+    highlights: List[str] = []
 
 
 class TourCreate(TourBase):

@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta, timezone
 from collections import defaultdict
 import json
 import calendar
+from src.services.visibility import visible_filter
 
 
 class AnalyticsService:
@@ -25,7 +26,7 @@ class AnalyticsService:
         # Basic counts
         total_bookings = self.db.query(models.Booking).count()
         total_customers = self.db.query(models.Booking.customer_email).distinct().count()
-        total_tours = self.db.query(models.Tour).filter(models.Tour.is_active == True).count()
+        total_tours = self.db.query(models.Tour).filter(visible_filter(models.Tour)).count()
         total_locations = self.db.query(models.Location).count()
         
         # This month's bookings

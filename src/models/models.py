@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, CheckConstraint, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.database.database import Base
@@ -6,6 +6,9 @@ from src.database.database import Base
 
 class Tour(Base):
     __tablename__ = "tours"
+    __table_args__ = (
+        CheckConstraint("status IN ('draft', 'published', 'scheduled')", name="ck_tours_status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
@@ -18,6 +21,14 @@ class Tour(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     is_popular = Column(Boolean, default=False)
+
+    # Pricing and publishing (amounts are whole GHS)
+    price_ghs = Column(Integer)
+    duration_days = Column(Integer)
+    capacity = Column(Integer)  # max group size per booking; NULL = no limit
+    highlights = Column(JSON, nullable=False, server_default="[]", default=list)
+    status = Column(String(16), nullable=False, server_default="draft", default="draft")
+    publish_at = Column(DateTime(timezone=True))
 
     # Relationships
     tour_locations = relationship("TourLocation", back_populates="tour")

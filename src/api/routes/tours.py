@@ -81,7 +81,7 @@ def create_location(location: schemas.LocationCreate, db: Session = Depends(get_
 @router.patch("/tours/popular/{tour_id}", response_model=schemas.Tour, dependencies=[Depends(require_admin)])
 def mark_tour_as_popular(tour_id: int, db: Session = Depends(get_db)):
     """Mark a tour as popular (admin only)"""
-    tour = crud.get_tour(db, tour_id=tour_id)
+    tour = crud.get_tour_any(db, tour_id=tour_id)
     if tour is None:
         raise HTTPException(status_code=404, detail="Tour not found")
     tour.is_popular = True
@@ -103,7 +103,7 @@ async def upload_tour_main_image(
     then sets it as the main image for the specified tour.
     """
     # Verify tour exists
-    tour = crud.get_tour(db, tour_id=tour_id)
+    tour = crud.get_tour_any(db, tour_id=tour_id)
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
     
@@ -171,7 +171,7 @@ async def upload_tour_gallery_images(
     then adds them to the tour's gallery.
     """
     # Verify tour exists
-    tour = crud.get_tour(db, tour_id=tour_id)
+    tour = crud.get_tour_any(db, tour_id=tour_id)
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
     
@@ -241,7 +241,7 @@ async def remove_tour_gallery_image(
     deletes it from Cloudinary storage.
     """
     # Verify tour exists
-    tour = crud.get_tour(db, tour_id=tour_id)
+    tour = crud.get_tour_any(db, tour_id=tour_id)
     if not tour:
         raise HTTPException(status_code=404, detail="Tour not found")
     
@@ -412,7 +412,7 @@ def reorder_tour_locations(
     """
     try:
         # Verify tour exists
-        tour = crud.get_tour(db, tour_id)
+        tour = crud.get_tour_any(db, tour_id)
         if not tour:
             raise HTTPException(status_code=404, detail="Tour not found")
         
@@ -455,8 +455,10 @@ def get_tour_location_relationship(
     with a tour, including its order in the tour.
     """
     try:
-        tour_location = crud.get_tour_location_relationship(db, tour_id, location_id)
-        
+        tour_location = None
+        if crud.get_tour(db, tour_id) is not None:
+            tour_location = crud.get_tour_location_relationship(db, tour_id, location_id)
+
         if not tour_location:
             raise HTTPException(
                 status_code=404, 
