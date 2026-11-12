@@ -20,7 +20,9 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 def booking_display_name(booking: models.Booking) -> Optional[str]:
-    """What the booking is for: the first tour by order."""
+    """What the booking is for: the event, or the first tour by order."""
+    if booking.event is not None:
+        return booking.event.name
     tours = sorted(booking.booking_tours, key=lambda bt: (bt.order or 0, bt.id))
     return tours[0].tour.name if tours else None
 
@@ -56,7 +58,10 @@ def list_bookings(
 ):
     query = (
         select(models.Booking)
-        .options(selectinload(models.Booking.booking_tours).selectinload(models.BookingTour.tour))
+        .options(
+            selectinload(models.Booking.booking_tours).selectinload(models.BookingTour.tour),
+            selectinload(models.Booking.event),
+        )
         .order_by(models.Booking.created_at.desc(), models.Booking.id.desc())
     )
     if status_filter:

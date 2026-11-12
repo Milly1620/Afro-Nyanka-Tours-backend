@@ -22,28 +22,42 @@ def _unavailable(extra_id: int) -> HTTPException:
     )
 
 
-def price_booking(db: Session, booking_in: schemas.BookingCreate, tours: list[models.Tour]) -> PricedBooking:
+def price_booking(
+    db: Session,
+    booking_in: schemas.BookingCreate,
+    tours: list[models.Tour],
+    event: Optional[models.Event] = None,
+) -> PricedBooking:
     """Compute the booking amount server-side and snapshot the chosen extras.
 
-    amount = sum(tour price x people) + sum(extra prices). If any tour has no
-    price the amount is None (quoted manually), but extras are still recorded.
-    `tours` are the already-validated, visible tours in this booking.
+    amount = sum(offering price x people) + sum(extra prices), where the
+    offerings are the booked tours, or the booked event. If any offering has
+    no price the amount is None (quoted manually), but extras are still
+    recorded. `tours`/`event` are already validated and visible.
     """
     tour_ids = [t.id for t in tours]
     snapshots: list[models.BookingExtra] = []
     extras_total = 0
     for selection in booking_in.extras:
-        tour_id = selection.tour_id
-        if tour_id is None and len(tour_ids) == 1:
-            tour_id = tour_ids[0]
-        if tour_id not in tour_ids:
-            raise _unavailable(selection.extra_id)
+        if event is not None:
+            if selection.tour_id is not None or selection.event_id not in (None, event.id):
+                raise _unavailable(selection.extra_id)
+            owner_filter = models.ExtraPrice.event_id == event.id
+            tour_id, event_id = None, event.id
+        else:
+            tour_id = selection.tour_id
+            if tour_id is None and len(tour_ids) == 1:
+                tour_id = tour_ids[0]
+            if tour_id not in tour_ids or selection.event_id is not None:
+                raise _unavailable(selection.extra_id)
+            owner_filter = models.ExtraPrice.tour_id == tour_id
+            event_id = None
         price = db.scalar(
             select(models.ExtraPrice)
             .join(models.Extra)
             .where(
                 models.ExtraPrice.extra_id == selection.extra_id,
-                models.ExtraPrice.tour_id == tour_id,
+                owner_filter,
                 models.Extra.is_active.is_(True),
             )
         )
@@ -51,12 +65,14 @@ def price_booking(db: Session, booking_in: schemas.BookingCreate, tours: list[mo
             raise _unavailable(selection.extra_id)
         snapshots.append(
             models.BookingExtra(
-                extra_id=price.extra_id, tour_id=tour_id, name=price.extra.name, price_ghs=price.price_ghs
+                extra_id=price.extra_id, tour_id=tour_id, event_id=event_id,
+                name=price.extra.name, price_ghs=price.price_ghs,
             )
         )
         extras_total += price.price_ghs
 
-    if any(t.price_ghs is None for t in tours):
+    offerings = [event] if event is not None else tours
+    if any(o.price_ghs is None for o in offerings):
         return PricedBooking(amount_ghs=None, extras=snapshots)
-    base = sum(t.price_ghs * booking_in.number_of_people for t in tours)
+    base = sum(o.price_ghs * booking_in.number_of_people for o in offerings)
     return PricedBooking(amount_ghs=base + extras_total, extras=snapshots)

@@ -10,6 +10,15 @@ from src.services.email_service import email_service
 router = APIRouter()
 
 
+def booking_message(summary: dict) -> str:
+    if summary.get("event"):
+        return f"Booking {summary['reference']} received for {summary['event']['name']}."
+    return (
+        f"Booking {summary['reference']} received: {summary['total_tours']} tours with "
+        f"{summary['total_locations']} locations."
+    )
+
+
 @router.post("/", response_model=schemas.BookingResponse)
 def create_booking(
     booking: schemas.BookingCreate,
@@ -18,10 +27,6 @@ def create_booking(
 ):
     """Create a new multi-tour booking"""
     try:
-        # Validate that tour_selections is not empty
-        if not booking.tour_selections:
-            raise HTTPException(status_code=400, detail="At least one tour must be selected")
-        
         # Create the booking
         db_booking = crud.create_booking(db=db, booking=booking)
         
@@ -34,7 +39,7 @@ def create_booking(
         
         return schemas.BookingResponse(
             booking=db_booking,
-            message=f"Multi-tour booking created successfully! {len(booking.tour_selections)} tours selected with {booking_summary['total_locations']} locations. Confirmation emails have been sent.",
+            message=booking_message(booking_summary),
             summary=booking_summary
         )
     except HTTPException:

@@ -1,11 +1,15 @@
+from datetime import date, datetime
+
+from fastapi import HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+
 from src.models import models
 from src.schemas import schemas
-from src.services.visibility import visible_filter
 from src.services.booking_status import booking_reference, record_created
+from src.services.events import seats_booked
 from src.services.pricing import price_booking
-from fastapi import HTTPException
+from src.services.visibility import visible_filter
 from typing import List, Optional, Dict
 
 
@@ -311,19 +315,48 @@ def validate_tour_locations(db: Session, tour_selections: List[schemas.BookingTo
     return True
 
 
+def lock_bookable_event(db: Session, event_id: int, number_of_people: int) -> models.Event:
+    """Lock the event row and check it can take this group.
+
+    The row lock serialises concurrent bookings for the same event, so two
+    requests can't both take the last seats. Held until the booking commits.
+    """
+    event = db.scalar(
+        select(models.Event)
+        .where(models.Event.id == event_id, visible_filter(models.Event))
+        .with_for_update()
+    )
+    if event is None or event.start_date < date.today():
+        raise HTTPException(status_code=400, detail=f"Event {event_id} is not available for booking")
+    if event.capacity is not None:
+        booked = seats_booked(db, [event.id])[event.id]
+        left = max(event.capacity - booked, 0)
+        if number_of_people > left:
+            raise HTTPException(status_code=409, detail=f"Only {left} seats left")
+    return event
+
+
 def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Booking:
     """Create a new booking with multiple tours and locations, priced server-side."""
 
-    # Validate tour selections (visible tours only; locations must belong to the tour)
-    validate_tour_locations(db, booking.tour_selections)
-    tours = [get_tour(db, selection.tour_id) for selection in booking.tour_selections]
-    for tour in tours:
-        if tour.capacity is not None and booking.number_of_people > tour.capacity:
-            raise HTTPException(
-                status_code=400,
-                detail=f"'{tour.name}' takes groups of up to {tour.capacity} people",
-            )
-    priced = price_booking(db, booking, tours)
+    event = None
+    tours: list = []
+    start_date, end_date = booking.start_date, booking.end_date
+    if booking.event_id is not None:
+        event = lock_bookable_event(db, booking.event_id, booking.number_of_people)
+        start_date = datetime.combine(event.start_date, datetime.min.time())
+        end_date = datetime.combine(event.end_date, datetime.min.time())
+    else:
+        # Visible tours only; locations must belong to the tour
+        validate_tour_locations(db, booking.tour_selections)
+        tours = [get_tour(db, selection.tour_id) for selection in booking.tour_selections]
+        for tour in tours:
+            if tour.capacity is not None and booking.number_of_people > tour.capacity:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"'{tour.name}' takes groups of up to {tour.capacity} people",
+                )
+    priced = price_booking(db, booking, tours, event)
 
     # Create the main booking
     db_booking = models.Booking(
@@ -331,11 +364,12 @@ def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Bookin
         customer_email=booking.customer_email,
         customer_age=booking.customer_age,
         customer_country=booking.customer_country,
-        start_date=booking.start_date,
-        end_date=booking.end_date,
+        start_date=start_date,
+        end_date=end_date,
         number_of_people=booking.number_of_people,
         additional_services=booking.additional_services,
         amount_ghs=priced.amount_ghs,
+        event_id=event.id if event is not None else None,
     )
     db.add(db_booking)
     db.flush()  # Get the booking ID
@@ -384,6 +418,17 @@ def get_booking_summary(db: Session, booking: models.Booking) -> Dict:
         "status": booking.status,
         "amount_ghs": booking.amount_ghs,
         "extras": [{"name": e.name, "price_ghs": e.price_ghs} for e in booking.booking_extras],
+        "event": (
+            {
+                "id": booking.event.id,
+                "name": booking.event.name,
+                "destination": booking.event.destination,
+                "start_date": str(booking.event.start_date),
+                "end_date": str(booking.event.end_date),
+            }
+            if booking.event is not None
+            else None
+        ),
         "total_tours": len(booking.booking_tours),
         "total_locations": len(booking.booking_locations),
         "tours_and_locations": []

@@ -6,7 +6,7 @@ from src.core.config import settings
 from src.schemas.schemas import Booking
 import logging
 import sys
-from datetime import datetime
+from datetime import date, datetime
 
 # Configure logging
 logging.basicConfig(
@@ -20,7 +20,15 @@ logger = logging.getLogger(__name__)
 def _price_context(booking_summary: dict) -> dict:
     """Template values for the booking reference, extras and total."""
     amount = booking_summary.get("amount_ghs")
+    event = booking_summary.get("event")
+    if event:
+        event = {
+            **event,
+            "start_display": date.fromisoformat(event["start_date"]).strftime("%B %d, %Y"),
+            "end_display": date.fromisoformat(event["end_date"]).strftime("%B %d, %Y"),
+        }
     return {
+        "event": event,
         "reference": booking_summary.get("reference", ""),
         "extras": booking_summary.get("extras", []),
         "amount_display": f"GHS {amount:,}" if amount is not None else "Price to be confirmed",
@@ -99,7 +107,12 @@ class EmailService:
 
     def send_booking_confirmation(self, booking: Booking, booking_summary: dict):
         """Send booking confirmation email to customer"""
-        subject = f"Multi-Tour Booking Confirmation - {len(booking.booking_tours)} Tours Selected"
+        event = booking_summary.get("event")
+        subject = (
+            f"Booking Confirmation - {event['name']}"
+            if event
+            else f"Multi-Tour Booking Confirmation - {len(booking.booking_tours)} Tours Selected"
+        )
         
         html_template = """
         <!DOCTYPE html>
@@ -160,6 +173,10 @@ class EmailService:
                     
                     <div class="booking-details">
                         <h3>Booking {{ reference }}</h3>
+                        {% if event %}
+                        <p><strong>Event:</strong> {{ event.name }}{% if event.destination %} ({{ event.destination }}){% endif %}</p>
+                        <p><strong>Dates:</strong> {{ event.start_display }} - {{ event.end_display }}</p>
+                        {% endif %}
                         {% for extra in extras %}
                         <p>{{ extra.name }}: GHS {{ "{:,}".format(extra.price_ghs) }}</p>
                         {% endfor %}
@@ -215,7 +232,12 @@ class EmailService:
 
     def send_admin_notification(self, booking: Booking, booking_summary: dict):
         """Send booking notification email to admin"""
-        subject = f"New Multi-Tour Booking - {booking.customer_name} ({len(booking.booking_tours)} tours)"
+        event = booking_summary.get("event")
+        subject = (
+            f"New Event Booking - {booking.customer_name} ({event['name']})"
+            if event
+            else f"New Multi-Tour Booking - {booking.customer_name} ({len(booking.booking_tours)} tours)"
+        )
         
         html_template = """
         <!DOCTYPE html>
@@ -476,6 +498,10 @@ class EmailService:
                     
                     <div class="section">
                         <h2 class="section-title">Booking {{ reference }}</h2>
+                        {% if event %}
+                        <p><strong>Event:</strong> {{ event.name }}{% if event.destination %} ({{ event.destination }}){% endif %}</p>
+                        <p><strong>Dates:</strong> {{ event.start_display }} - {{ event.end_display }}</p>
+                        {% endif %}
                         {% for extra in extras %}
                         <p>{{ extra.name }}: GHS {{ "{:,}".format(extra.price_ghs) }}</p>
                         {% endfor %}

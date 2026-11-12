@@ -237,8 +237,15 @@ class BookingExtraSelection(BaseModel):
 
 
 class BookingCreate(BookingBase):
-    tour_selections: List[BookingTourCreate]  # Multiple tours with selected locations
+    tour_selections: List[BookingTourCreate] = []  # Multiple tours with selected locations
+    event_id: Optional[int] = None  # book a fixed-date event instead of tours
     extras: List[BookingExtraSelection] = []
+
+    @model_validator(mode="after")
+    def _event_or_tours(self):
+        if (self.event_id is None) == (not self.tour_selections):
+            raise ValueError("Book either one event (event_id) or one or more tours (tour_selections)")
+        return self
 
     @model_validator(mode="after")
     def _no_duplicate_extras(self):
