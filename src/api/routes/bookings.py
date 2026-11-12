@@ -37,6 +37,8 @@ def create_booking(
             message=f"Multi-tour booking created successfully! {len(booking.tour_selections)} tours selected with {booking_summary['total_locations']} locations. Confirmation emails have been sent.",
             summary=booking_summary
         )
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

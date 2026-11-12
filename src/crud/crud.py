@@ -3,7 +3,9 @@ from sqlalchemy import func
 from src.models import models
 from src.schemas import schemas
 from src.services.visibility import visible_filter
-from src.services.booking_status import record_created
+from src.services.booking_status import booking_reference, record_created
+from src.services.pricing import price_booking
+from fastapi import HTTPException
 from typing import List, Optional, Dict
 
 
@@ -310,11 +312,19 @@ def validate_tour_locations(db: Session, tour_selections: List[schemas.BookingTo
 
 
 def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Booking:
-    """Create a new booking with multiple tours and locations"""
-    
-    # Validate tour selections
+    """Create a new booking with multiple tours and locations, priced server-side."""
+
+    # Validate tour selections (visible tours only; locations must belong to the tour)
     validate_tour_locations(db, booking.tour_selections)
-    
+    tours = [get_tour(db, selection.tour_id) for selection in booking.tour_selections]
+    for tour in tours:
+        if tour.capacity is not None and booking.number_of_people > tour.capacity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{tour.name}' takes groups of up to {tour.capacity} people",
+            )
+    priced = price_booking(db, booking, tours)
+
     # Create the main booking
     db_booking = models.Booking(
         customer_name=booking.customer_name,
@@ -324,12 +334,16 @@ def create_booking(db: Session, booking: schemas.BookingCreate) -> models.Bookin
         start_date=booking.start_date,
         end_date=booking.end_date,
         number_of_people=booking.number_of_people,
-        additional_services=booking.additional_services
+        additional_services=booking.additional_services,
+        amount_ghs=priced.amount_ghs,
     )
     db.add(db_booking)
     db.flush()  # Get the booking ID
     record_created(db, db_booking)
-    
+    for snapshot in priced.extras:
+        snapshot.booking_id = db_booking.id
+        db.add(snapshot)
+
     # Add selected tours to booking
     for selection in booking.tour_selections:
         # Create booking-tour relationship
@@ -366,6 +380,10 @@ def get_bookings(db: Session, skip: int = 0, limit: int = 100) -> List[models.Bo
 def get_booking_summary(db: Session, booking: models.Booking) -> Dict:
     """Get a summary of the booking with tour and location details"""
     summary = {
+        "reference": booking_reference(booking.id),
+        "status": booking.status,
+        "amount_ghs": booking.amount_ghs,
+        "extras": [{"name": e.name, "price_ghs": e.price_ghs} for e in booking.booking_extras],
         "total_tours": len(booking.booking_tours),
         "total_locations": len(booking.booking_locations),
         "tours_and_locations": []

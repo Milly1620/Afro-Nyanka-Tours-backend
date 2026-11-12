@@ -17,6 +17,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _price_context(booking_summary: dict) -> dict:
+    """Template values for the booking reference, extras and total."""
+    amount = booking_summary.get("amount_ghs")
+    return {
+        "reference": booking_summary.get("reference", ""),
+        "extras": booking_summary.get("extras", []),
+        "amount_display": f"GHS {amount:,}" if amount is not None else "Price to be confirmed",
+    }
+
+
 class EmailService:
     BREVO_SEND_URL = "https://api.brevo.com/v3/smtp/email"
 
@@ -148,6 +158,14 @@ class EmailService:
                         {% endif %}
                     </div>
                     
+                    <div class="booking-details">
+                        <h3>Booking {{ reference }}</h3>
+                        {% for extra in extras %}
+                        <p>{{ extra.name }}: GHS {{ "{:,}".format(extra.price_ghs) }}</p>
+                        {% endfor %}
+                        <p><strong>Total:</strong> {{ amount_display }}</p>
+                    </div>
+
                     <h3>Your Selected Tours & Locations:</h3>
                     {% for tour in tours_and_locations %}
                     <div class="tour-section">
@@ -183,7 +201,8 @@ class EmailService:
             number_of_people=booking.number_of_people,
             total_tours=booking_summary["total_tours"],
             total_locations=booking_summary["total_locations"],
-            tours_and_locations=booking_summary["tours_and_locations"]
+            tours_and_locations=booking_summary["tours_and_locations"],
+            **_price_context(booking_summary),
         )
         
         # Replies from the customer go to the admin inbox rather than the sender address
@@ -456,6 +475,14 @@ class EmailService:
                     </div>
                     
                     <div class="section">
+                        <h2 class="section-title">Booking {{ reference }}</h2>
+                        {% for extra in extras %}
+                        <p>{{ extra.name }}: GHS {{ "{:,}".format(extra.price_ghs) }}</p>
+                        {% endfor %}
+                        <p><strong>Total:</strong> {{ amount_display }}</p>
+                    </div>
+
+                    <div class="section">
                         <h2 class="section-title">Selected Tours</h2>
                         {% for tour in tours_and_locations %}
                         <div class="tour-card">
@@ -497,6 +524,7 @@ class EmailService:
             total_tours=booking_summary["total_tours"],
             total_locations=booking_summary["total_locations"],
             tours_and_locations=booking_summary["tours_and_locations"],
+            **_price_context(booking_summary),
             current_time=datetime.now().strftime("%B %d, %Y at %I:%M %p")
         )
         

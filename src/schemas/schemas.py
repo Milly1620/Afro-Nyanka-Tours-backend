@@ -1,6 +1,6 @@
 import json
 
-from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator
+from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator, model_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
@@ -223,11 +223,25 @@ class BookingBase(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     additional_services: Optional[str] = None
-    number_of_people: int = Field(default=1, description="Number of people in the booking")
+    number_of_people: int = Field(default=1, ge=1, description="Number of people in the booking")
+
+
+class BookingExtraSelection(BaseModel):
+    extra_id: int
+    tour_id: Optional[int] = None  # may be omitted when exactly one tour is booked
+    event_id: Optional[int] = None
 
 
 class BookingCreate(BookingBase):
     tour_selections: List[BookingTourCreate]  # Multiple tours with selected locations
+    extras: List[BookingExtraSelection] = []
+
+    @model_validator(mode="after")
+    def _no_duplicate_extras(self):
+        keys = [(e.extra_id, e.tour_id, e.event_id) for e in self.extras]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Each extra can only be selected once")
+        return self
     
     class Config:
         json_schema_extra = {

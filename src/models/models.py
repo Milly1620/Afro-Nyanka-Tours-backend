@@ -107,6 +107,7 @@ class Booking(Base):
     booking_tours = relationship("BookingTour", back_populates="booking")
     booking_locations = relationship("BookingLocation", back_populates="booking")
     events = relationship("BookingEvent", back_populates="booking", order_by="BookingEvent.id")
+    booking_extras = relationship("BookingExtra", back_populates="booking", order_by="BookingExtra.id")
 
 
 class BookingTour(Base):
@@ -203,3 +204,19 @@ class ExtraPrice(Base):
 
     extra = relationship("Extra", back_populates="prices", lazy="joined")
     tour = relationship("Tour", back_populates="extra_prices")
+
+
+class BookingExtra(Base):
+    """Snapshot of an extra chosen on a booking: name and price frozen at booking time."""
+
+    __tablename__ = "booking_extras"
+
+    id = Column(Integer, primary_key=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False, index=True)
+    extra_id = Column(Integer, ForeignKey("extras.id"), nullable=False)
+    tour_id = Column(Integer, ForeignKey("tours.id"))
+    event_id = Column(Integer)  # FK to events.id added with the events table
+    name = Column(String, nullable=False)
+    price_ghs = Column(Integer, nullable=False)
+
+    booking = relationship("Booking", back_populates="booking_extras")
