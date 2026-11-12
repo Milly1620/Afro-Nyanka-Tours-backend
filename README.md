@@ -89,7 +89,15 @@ ADMIN_EMAIL=admin@afro-nyanka-tours.com
 DATABASE_URL=postgresql://afro_user:afro_password@localhost:5432/afro_tours_db
 DEBUG=True
 SECRET_KEY=your-secret-key-here-change-in-production
+ADMIN_EMAILS=owner@example.com
+FRONTEND_URL=http://localhost:3000
 ```
+
+**Admin accounts**: admins are managed through `ADMIN_EMAILS` (comma-separated). On startup the API
+creates an account for each new email and emails it a one-time set-password link
+(`{FRONTEND_URL}/admin/set-password?token=...`, valid 24 hours). Removing an email deactivates that
+admin on the next startup; an empty `ADMIN_EMAILS` leaves existing admins unchanged. "Forgot password"
+sends the same kind of link. With `DEBUG=False` the app refuses to start unless `SECRET_KEY` is set.
 
 **Note**: Emails are sent through Brevo. You need to:
 1. Create an API key in Brevo (SMTP & API → API Keys) and set it as `BREVO_API_KEY`
@@ -219,6 +227,9 @@ curl -X GET "http://localhost:8000/api/tours/country/Ghana"
   - Enable HTTPS
   - Configure CORS properly
   - Use environment variables for sensitive data
+
+- **Admin API**: admin routes require `Authorization: Bearer <token>` from
+  `POST /api/admin/auth/login`. Failed logins are rate-limited (5 per 15 minutes per email + IP).
 
 - **Email Security**:
   - Keep the Brevo API key out of source control

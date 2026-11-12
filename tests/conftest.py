@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from src.database.database import engine, get_db
+from src.database.database import SessionLocal, engine, get_db
 from src.main import app
 from src.services.email_service import email_service
 
@@ -39,16 +39,38 @@ def migrated_db():
 
 
 @pytest.fixture
-def db():
-    connection = engine.connect()
-    trans = connection.begin()
-    session = Session(bind=connection, join_transaction_mode="create_savepoint")
+def connection():
+    conn = engine.connect()
+    trans = conn.begin()
+    try:
+        yield conn
+    finally:
+        trans.rollback()
+        conn.close()
+
+
+@pytest.fixture
+def session_factory(connection):
+    """Sessions bound to the per-test connection; all writes roll back."""
+    return lambda: Session(bind=connection, join_transaction_mode="create_savepoint")
+
+
+@pytest.fixture
+def db(session_factory):
+    session = session_factory()
     try:
         yield session
     finally:
         session.close()
-        trans.rollback()
-        connection.close()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    from src.services.rate_limit import login_rate_limiter
+
+    login_rate_limiter.reset_all()
+    yield
+    login_rate_limiter.reset_all()
 
 
 @pytest.fixture
@@ -64,8 +86,35 @@ def sent_emails(monkeypatch):
 
 
 @pytest.fixture
-def client(db, sent_emails):
+def client(db, session_factory, sent_emails):
     app.dependency_overrides[get_db] = lambda: db
+    app.state.session_factory = session_factory
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    app.state.session_factory = SessionLocal
+
+
+ADMIN_TEST_EMAIL = "admin@example.com"
+ADMIN_TEST_PASSWORD = "correct-horse-battery"
+
+
+@pytest.fixture
+def admin_user(db):
+    from src.core.security import hash_password
+    from src.models.admin import AdminUser
+
+    admin = AdminUser(email=ADMIN_TEST_EMAIL, password_hash=hash_password(ADMIN_TEST_PASSWORD))
+    db.add(admin)
+    db.flush()
+    return admin
+
+
+@pytest.fixture
+def admin_headers(client, admin_user):
+    response = client.post(
+        "/api/admin/auth/login",
+        json={"email": ADMIN_TEST_EMAIL, "password": ADMIN_TEST_PASSWORD},
+    )
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}

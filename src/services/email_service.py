@@ -1,3 +1,4 @@
+import html
 import httpx
 from typing import Optional
 from jinja2 import Template
@@ -692,6 +693,34 @@ class EmailService:
             reply_to_email=email,
             reply_to_name=name,
         )
+
+    def send_password_link(self, to_email: str, link: str, purpose: str) -> bool:
+        """Email an admin a one-time set/reset password link (never a password)."""
+        action = "Set" if purpose == "set" else "Reset"
+        subject = f"{action} your Afro Nyanka Tours admin password"
+        intro = (
+            "An admin account has been created for you on the Afro Nyanka Tours dashboard."
+            if purpose == "set"
+            else "We received a request to reset your Afro Nyanka Tours admin password."
+        )
+        safe_link = html.escape(link, quote=True)
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 560px; margin: 0 auto; padding: 24px;">
+                <h2 style="color: #E8772E;">{action} your password</h2>
+                <p>{intro}</p>
+                <p style="margin: 28px 0;">
+                    <a href="{safe_link}" style="background: #E8772E; color: #fff; padding: 12px 22px;
+                       border-radius: 6px; text-decoration: none; font-weight: bold;">{action} password</a>
+                </p>
+                <p>This link expires in 24 hours and can only be used once.</p>
+                <p style="color: #888; font-size: 13px;">If you didn't expect this email, you can ignore it.</p>
+            </div>
+        </body>
+        </html>
+        """
+        return self.send_email(to_email=to_email, subject=subject, html_content=html_content)
 
 
 email_service = EmailService()
