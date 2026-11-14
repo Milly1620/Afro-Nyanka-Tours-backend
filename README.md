@@ -93,6 +93,7 @@ ADMIN_EMAILS=owner@example.com
 FRONTEND_URL=http://localhost:3000
 CORS_ORIGINS=https://afronyankatours.com
 CRON_SECRET=a-long-random-string
+TRUST_PROXY_HEADERS=false  # true on Render
 ```
 
 **Admin accounts**: admins are managed through `ADMIN_EMAILS` (comma-separated). On startup the API
@@ -100,7 +101,8 @@ creates an account for each new email and emails it a one-time set-password link
 (`{FRONTEND_URL}/admin/set-password?token=...`, valid 24 hours). Removing an email deactivates that
 admin on the next startup; an empty `ADMIN_EMAILS` leaves existing admins unchanged. "Forgot password"
 sends the same kind of link, and setting a new password signs out every existing session. With `DEBUG=False`
-the app refuses to start unless `SECRET_KEY` is at least 32 characters and `FRONTEND_URL` is set.
+the app refuses to start unless `SECRET_KEY` is at least 32 characters and `FRONTEND_URL` is the public site
+(not localhost).
 
 **Note**: Emails are sent through Brevo. You need to:
 1. Create an API key in Brevo (SMTP & API → API Keys) and set it as `BREVO_API_KEY`
@@ -204,7 +206,9 @@ The admin's weekly summary is sent when something calls the endpoint below with 
 curl -fsS -X POST -H "X-Cron-Secret: $CRON_SECRET" https://<api-host>/api/admin/reports/weekly-summary
 ```
 
-It is sent to `ADMIN_EMAIL`, only while "Weekly summary email" is switched on in admin Settings.
+It is sent to every active admin (from `ADMIN_EMAILS`), only while "Weekly summary email" is switched on in
+admin Settings. The call returns 503 if there are no active admins and 502 if an email fails, so the cron
+job shows the failure.
 
 ## API Usage Examples
 
@@ -240,11 +244,15 @@ curl -X GET "http://localhost:8000/api/tours/country/Ghana"
   - Use strong secret keys
   - Enable HTTPS
   - Set `CORS_ORIGINS` to the frontend's origin(s) (defaults to `*`)
+  - Set `TRUST_PROXY_HEADERS=true` on Render (its proxy appends the client IP to `X-Forwarded-For`)
   - Use environment variables for sensitive data
 
 - **Admin API**: admin routes require `Authorization: Bearer <token>` from
   `POST /api/admin/auth/login`. Login attempts are rate-limited: 5 failures per 15 minutes per email + IP
-  (rightmost `X-Forwarded-For` entry), and 20 per 15 minutes per email across all IPs.
+  (rightmost `X-Forwarded-For` entry when `TRUST_PROXY_HEADERS=true`, else the connecting IP), and 20 per
+  15 minutes per email across all IPs. IPs an admin has already logged in from are exempt from the
+  per-email cap (remembered in memory until restart), so failed guesses elsewhere can't lock them out.
+  Forgot-password allows 10 requests per hour per IP and sends at most 3 links per hour per email.
 
 - **Email Security**:
   - Keep the Brevo API key out of source control

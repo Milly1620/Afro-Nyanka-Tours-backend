@@ -2,10 +2,12 @@ import os
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
+from urllib.parse import urlparse
 
 
 DEFAULT_SECRET_KEY = "your-secret-key-here-change-in-production"
 MIN_SECRET_KEY_LENGTH = 32
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 
 class Settings(BaseSettings):
@@ -32,6 +34,8 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     cron_secret: Optional[str] = None  # shared secret for the weekly-summary cron call
     cors_origins: str = "*"  # comma-separated list of allowed origins
+    # True only behind a proxy that appends the client IP to X-Forwarded-For (Render does).
+    trust_proxy_headers: bool = False
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -45,8 +49,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"SECRET_KEY must be a real secret of at least {MIN_SECRET_KEY_LENGTH} characters when DEBUG is false"
             )
-        if not (self.frontend_url or "").strip():
-            raise ValueError("FRONTEND_URL must be set when DEBUG is false (used in admin password links)")
+        host = urlparse((self.frontend_url or "").strip()).hostname
+        if not host or host in LOCAL_HOSTS:
+            raise ValueError(
+                "FRONTEND_URL must be the public site URL when DEBUG is false (used in admin password links)"
+            )
         return self
     
     class Config:

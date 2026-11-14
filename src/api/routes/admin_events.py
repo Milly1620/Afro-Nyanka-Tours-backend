@@ -18,8 +18,9 @@ from src.schemas.admin_schemas import (
     AttachExtraRequest,
 )
 from src.schemas.schemas import ImageUploadResponse, MultipleImageUploadResponse, parse_gallery
-from src.services.cloudinary_service import cloudinary_service
-from src.services.events import seats_booked
+from src.services.cloudinary_service import cloudinary_service, public_id_from_url
+from src.services.events import seats_booked, seats_left
+from src.services.locations import replace_locations
 from src.services.visibility import PUBLISH_STATUSES, assert_publishable
 
 logger = logging.getLogger(__name__)
@@ -42,21 +43,12 @@ def _get_or_404(db: Session, event_id: int) -> models.Event:
 def _admin(db: Session, event: models.Event, booked: Optional[int] = None) -> AdminEvent:
     out = AdminEvent.model_validate(event)
     out.seats_booked = seats_booked(db, [event.id])[event.id] if booked is None else booked
-    out.seats_left = None if event.capacity is None else max(event.capacity - out.seats_booked, 0)
+    out.seats_left = seats_left(event, out.seats_booked)
     return out
 
 
 def _replace_locations(db: Session, event: models.Event, location_ids: list[int]) -> None:
-    if len(set(location_ids)) != len(location_ids):
-        raise HTTPException(status_code=422, detail="Duplicate location ids")
-    if location_ids:
-        found = set(db.scalars(select(models.Location.id).where(models.Location.id.in_(location_ids))))
-        missing = [i for i in location_ids if i not in found]
-        if missing:
-            raise HTTPException(status_code=422, detail=f"Unknown location ids: {missing}")
-    db.execute(delete(models.EventLocation).where(models.EventLocation.event_id == event.id))
-    for order, location_id in enumerate(location_ids, start=1):
-        db.add(models.EventLocation(event_id=event.id, location_id=location_id, order=order))
+    replace_locations(db, models.EventLocation, "event_id", event.id, location_ids)
 
 
 def _save(db: Session, event: models.Event) -> None:
@@ -99,6 +91,17 @@ def create_event(body: AdminEventCreate, db: Session = Depends(get_db)):
     return _admin(db, event)
 
 
+def _assert_capacity_covers_bookings(db: Session, event_id: int, capacity: int) -> None:
+    # Lock the event row so a booking can't slip in between the count and the save.
+    db.execute(select(models.Event.id).where(models.Event.id == event_id).with_for_update())
+    booked = seats_booked(db, [event_id])[event_id]
+    if capacity < booked:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"{booked} seats are already booked; capacity can't be lower than that",
+        )
+
+
 @router.patch("/{event_id}", response_model=AdminEvent)
 def update_event(event_id: int, body: AdminEventUpdate, db: Session = Depends(get_db)):
     event = _get_or_404(db, event_id)
@@ -109,6 +112,8 @@ def update_event(event_id: int, body: AdminEventUpdate, db: Session = Depends(ge
     for field in ("name", "country", "status", "start_date", "end_date"):
         if field in changes and changes[field] is None:
             raise HTTPException(status_code=422, detail=f"{field} cannot be null")
+    if changes.get("capacity") is not None:
+        _assert_capacity_covers_bookings(db, event.id, changes["capacity"])
     for field, value in changes.items():
         setattr(event, field, value)
     if event.end_date < event.start_date:
@@ -211,9 +216,8 @@ def remove_event_gallery_image(event_id: int, image_url: str = Form(...), db: Se
     gallery.remove(image_url)
     event.gallery_images = json.dumps(gallery)
     db.commit()
-    if "cloudinary.com" in image_url:
-        # .../upload/<version>/<public_id>.<ext>
-        public_id = image_url.split("/upload/", 1)[-1].split("/", 1)[-1].rsplit(".", 1)[0]
+    public_id = public_id_from_url(image_url)
+    if public_id:
         if not cloudinary_service.delete_image(public_id):
             logger.warning("Removed %s from event %s but Cloudinary delete failed", image_url, event.id)
     return {"success": True, "message": "Image removed from gallery", "remaining_images": gallery}

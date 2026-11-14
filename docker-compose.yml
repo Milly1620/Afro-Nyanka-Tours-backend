@@ -12,9 +12,10 @@ services:
       - ADMIN_EMAILS=${ADMIN_EMAILS}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - TRUST_PROXY_HEADERS=${TRUST_PROXY_HEADERS:-false}
       - CRON_SECRET=${CRON_SECRET}
       - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${DEBUG:-False}
+      - DEBUG=${DEBUG:-True}  # local dev; production must set DEBUG=False with a real FRONTEND_URL
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}

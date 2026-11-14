@@ -3,11 +3,13 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.api.deps import require_admin
 from src.core.config import settings
 from src.database.database import get_db
+from src.models.admin import AdminUser
 from src.schemas.admin_schemas import SiteSettingsAdmin, SiteSettingsPublic, SiteSettingsUpdate
 from src.services.cloudinary_service import cloudinary_service
 from src.services.dashboard import get_dashboard_metrics
@@ -69,7 +71,14 @@ def weekly_summary(x_cron_secret: Optional[str] = Header(None), db: Session = De
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid cron secret")
     if not get_site_settings(db).notify_weekly_summary:
         return {"sent": False}
-    sent = bool(email_service.send_weekly_summary(settings.admin_email, get_dashboard_metrics(db)))
-    if not sent:
-        logger.error("Weekly summary email failed to send")
-    return {"sent": sent}
+    recipients = db.scalars(
+        select(AdminUser.email).where(AdminUser.is_active.is_(True)).order_by(AdminUser.email)
+    ).all()
+    if not recipients:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="No active admins to send the summary to")
+    metrics = get_dashboard_metrics(db)
+    failed = [to for to in recipients if not email_service.send_weekly_summary(to, metrics)]
+    if failed:
+        logger.error("Weekly summary failed to send to %d of %d admins", len(failed), len(recipients))
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Weekly summary email failed to send")
+    return {"sent": True}

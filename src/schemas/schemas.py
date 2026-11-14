@@ -248,6 +248,13 @@ class BookingCreate(BookingBase):
         return self
 
     @model_validator(mode="after")
+    def _no_duplicate_tours(self):
+        tour_ids = [t.tour_id for t in self.tour_selections]
+        if len(tour_ids) != len(set(tour_ids)):
+            raise ValueError("Each tour can only be selected once")
+        return self
+
+    @model_validator(mode="after")
     def _no_duplicate_extras(self):
         keys = [(e.extra_id, e.tour_id, e.event_id) for e in self.extras]
         if len(keys) != len(set(keys)):

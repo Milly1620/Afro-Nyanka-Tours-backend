@@ -56,6 +56,7 @@ def test_public_routes_stay_open(client, method, path, body):
 def test_cors_origins_setting(monkeypatch):
     from src.core.config import Settings
 
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
     s = Settings(_env_file=None, DATABASE_URL="x", debug=True, cors_origins="https://a.com, https://b.com")
     assert s.cors_origin_list == ["https://a.com", "https://b.com"]
     assert Settings(_env_file=None, DATABASE_URL="x", debug=True).cors_origin_list == ["*"]

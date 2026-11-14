@@ -5,7 +5,7 @@ from src.database.database import get_db
 from src.api.deps import require_admin
 from src.schemas import schemas
 from src.crud import crud
-from src.services.cloudinary_service import cloudinary_service
+from src.services.cloudinary_service import cloudinary_service, public_id_from_url
 import logging
 
 logger = logging.getLogger(__name__)
@@ -250,18 +250,10 @@ async def remove_tour_gallery_image(
         updated_tour = crud.remove_tour_gallery_image(db, tour_id, image_url)
         
         if updated_tour:
-            # Extract public_id from URL to delete from Cloudinary
-            if "cloudinary.com" in image_url:
-                # Extract public_id from Cloudinary URL
-                # URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/public_id.format
-                parts = image_url.split("/")
-                if len(parts) >= 7:
-                    public_id_with_ext = "/".join(parts[7:])  # Everything after upload/version/
-                    public_id = public_id_with_ext.rsplit(".", 1)[0]  # Remove file extension
-                    
-                    # Delete from Cloudinary
-                    cloudinary_service.delete_image(public_id)
-                    logger.info(f"Deleted image from Cloudinary: {public_id}")
+            public_id = public_id_from_url(image_url)
+            if public_id:
+                cloudinary_service.delete_image(public_id)
+                logger.info(f"Deleted image from Cloudinary: {public_id}")
             
             return {"success": True, "message": "Image removed successfully"}
         else:

@@ -6,6 +6,9 @@ os.environ["DATABASE_URL"] = os.environ.get(
 os.environ["SECRET_KEY"] = "test-secret-key-that-is-at-least-32-chars"
 os.environ.setdefault("BREVO_API_KEY", "test-brevo-key")
 os.environ.setdefault("ADMIN_EMAIL", "ops@example.com")
+os.environ["FRONTEND_URL"] = "https://afronyanka.test"
+os.environ["CORS_ORIGINS"] = "https://afronyanka.test"
+os.environ["TRUST_PROXY_HEADERS"] = "true"  # like Render, which appends the client IP
 
 import pytest
 from alembic import command
@@ -66,12 +69,16 @@ def db(session_factory):
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    from src.services.rate_limit import email_rate_limiter, login_rate_limiter
+    from src.services import rate_limit
 
-    for limiter in (login_rate_limiter, email_rate_limiter):
+    limiters = (
+        rate_limit.login_rate_limiter, rate_limit.email_rate_limiter, rate_limit.known_login_ips,
+        rate_limit.forgot_ip_limiter, rate_limit.forgot_email_limiter,
+    )
+    for limiter in limiters:
         limiter.reset_all()
     yield
-    for limiter in (login_rate_limiter, email_rate_limiter):
+    for limiter in limiters:
         limiter.reset_all()
 
 

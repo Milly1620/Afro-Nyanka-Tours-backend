@@ -7,6 +7,8 @@ import logging
 from typing import Optional, Dict, Any, List
 from fastapi import UploadFile
 import json
+import re
+from urllib.parse import urlparse
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -224,6 +226,24 @@ class CloudinaryService:
             return False
         
         return True
+
+
+_VERSION_SEGMENT = re.compile(r"v\d+")
+
+
+def public_id_from_url(url: str) -> Optional[str]:
+    """Cloudinary public_id from a delivery URL, or None for non-Cloudinary URLs.
+
+    URL shape: https://res.cloudinary.com/<cloud>/image/upload/[v<version>/]<public_id>.<ext>
+    """
+    parsed = urlparse(url)
+    if not (parsed.hostname or "").endswith("cloudinary.com") or "/upload/" not in parsed.path:
+        return None
+    segments = parsed.path.split("/upload/", 1)[1].split("/")
+    if segments and _VERSION_SEGMENT.fullmatch(segments[0]):
+        segments = segments[1:]
+    public_id = "/".join(segments).rsplit(".", 1)[0]
+    return public_id or None
 
 
 # Global instance

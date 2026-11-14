@@ -92,12 +92,12 @@ def test_weekly_summary_wrong_secret_401(client, monkeypatch):
     assert client.post(REPORT, headers={"X-Cron-Secret": "wrong"}).status_code == 401
 
 
-def test_weekly_summary_sends_to_admin(client, db, monkeypatch, sent_emails):
+def test_weekly_summary_sends_to_admin(client, db, admin_user, monkeypatch, sent_emails):
     monkeypatch.setattr(settings, "cron_secret", "right")
     make_booking(db, status="paid", amount_ghs=4200)
     r = client.post(REPORT, headers={"X-Cron-Secret": "right"})
     assert r.json() == {"sent": True}
-    assert [e["to"] for e in sent_emails] == [settings.admin_email]
+    assert [e["to"] for e in sent_emails] == [admin_user.email]
     assert "GHS 4,200" in sent_emails[0]["html"]
 
 

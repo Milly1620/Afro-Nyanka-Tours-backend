@@ -9,6 +9,7 @@ from src.database.database import get_db
 from src.models import analytics, models
 from src.api.routes.admin_extras import attach_extra, detach_extra, get_extra_or_404
 from src.schemas.admin_schemas import AdminTour, AdminTourCreate, AdminTourList, AdminTourUpdate, AttachExtraRequest
+from src.services.locations import replace_locations
 from src.services.visibility import PUBLISH_STATUSES, assert_publishable
 
 router = APIRouter(dependencies=[Depends(require_admin)])
@@ -27,16 +28,7 @@ def _get_or_404(db: Session, tour_id: int) -> models.Tour:
 
 
 def _replace_locations(db: Session, tour: models.Tour, location_ids: list[int]) -> None:
-    if len(set(location_ids)) != len(location_ids):
-        raise HTTPException(status_code=422, detail="Duplicate location ids")
-    if location_ids:
-        found = set(db.scalars(select(models.Location.id).where(models.Location.id.in_(location_ids))))
-        missing = [i for i in location_ids if i not in found]
-        if missing:
-            raise HTTPException(status_code=422, detail=f"Unknown location ids: {missing}")
-    db.execute(delete(models.TourLocation).where(models.TourLocation.tour_id == tour.id))
-    for order, location_id in enumerate(location_ids, start=1):
-        db.add(models.TourLocation(tour_id=tour.id, location_id=location_id, order=order))
+    replace_locations(db, models.TourLocation, "tour_id", tour.id, location_ids)
 
 
 @router.get("", response_model=AdminTourList)
@@ -65,7 +57,7 @@ def get_tour(tour_id: int, db: Session = Depends(get_db)):
 @router.post("", response_model=AdminTour, status_code=status.HTTP_201_CREATED)
 def create_tour(body: AdminTourCreate, db: Session = Depends(get_db)):
     assert_publishable(body.price_ghs, body.status, body.publish_at)
-    tour = models.Tour(**{f: getattr(body, f) for f in NON_LOCATION_FIELDS}, is_active=True)
+    tour = models.Tour(**{f: getattr(body, f) for f in NON_LOCATION_FIELDS}, is_active=body.status != "draft")
     db.add(tour)
     db.flush()
     _replace_locations(db, tour, body.location_ids)
@@ -86,6 +78,7 @@ def update_tour(tour_id: int, body: AdminTourUpdate, db: Session = Depends(get_d
             raise HTTPException(status_code=422, detail=f"{field} cannot be null")
     for field, value in changes.items():
         setattr(tour, field, value)
+    tour.is_active = tour.status != "draft"  # legacy field, kept in step with status
     # Only re-check publish rules when they're being changed, so existing
     # unpriced published tours can still be edited.
     if {"status", "price_ghs", "publish_at"} & changes.keys():
