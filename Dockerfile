@@ -26,4 +26,5 @@ COPY test_email.py .
 EXPOSE 8000
 
 # Command to run the application
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Apply migrations first; if they fail the container exits and the previous deploy keeps serving.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"]

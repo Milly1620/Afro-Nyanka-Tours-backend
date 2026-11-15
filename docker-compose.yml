@@ -23,7 +23,8 @@ services:
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    # Apply migrations first; if they fail the container exits instead of serving a stale schema.
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
   # db:
   #   image: postgres:15
