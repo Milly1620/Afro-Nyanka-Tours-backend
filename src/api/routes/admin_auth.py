@@ -13,7 +13,7 @@ from src.schemas.admin_schemas import (
     SetPasswordRequest,
     TokenResponse,
 )
-from src.services.admin_bootstrap import issue_password_link, normalise_email
+from src.services.admin_bootstrap import apply_new_password, issue_password_link, normalise_email
 from src.services.email_service import email_service
 from src.core.config import settings
 from src.services.rate_limit import (
@@ -116,16 +116,7 @@ def set_password(body: SetPasswordRequest, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This link is invalid or has expired")
 
-    db.execute(
-        update(AdminUser)
-        .where(AdminUser.id == admin_id)
-        .values(password_hash=hash_password(body.password), password_changed_at=now)
-    )
-    db.execute(
-        update(PasswordToken)
-        .where(PasswordToken.admin_id == admin_id, PasswordToken.used_at.is_(None))
-        .values(used_at=now)
-    )
+    apply_new_password(db, admin_id, body.password)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

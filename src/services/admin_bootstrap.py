@@ -7,12 +7,27 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from src.core.config import settings
-from src.core.security import _now, new_one_time_token
+from src.core.security import _now, hash_password, new_one_time_token
 from src.models.admin import AdminUser, PasswordToken
 
 logger = logging.getLogger(__name__)
 
 LINK_LIFETIME = timedelta(hours=24)
+
+
+def apply_new_password(db: Session, admin_id: int, password: str) -> None:
+    """Set an admin's password, sign out their sessions and void unused links. Caller commits."""
+    now = _now()
+    db.execute(
+        update(AdminUser)
+        .where(AdminUser.id == admin_id)
+        .values(password_hash=hash_password(password), password_changed_at=now)
+    )
+    db.execute(
+        update(PasswordToken)
+        .where(PasswordToken.admin_id == admin_id, PasswordToken.used_at.is_(None))
+        .values(used_at=now)
+    )
 
 
 def normalise_email(email: str) -> str:

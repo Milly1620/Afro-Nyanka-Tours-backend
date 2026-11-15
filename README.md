@@ -104,6 +104,16 @@ sends the same kind of link, and setting a new password signs out every existing
 the app refuses to start unless `SECRET_KEY` is at least 32 characters and `FRONTEND_URL` is the public site
 (not localhost).
 
+To set a password without the emailed link (e.g. before the frontend's set-password page exists), run
+this in a shell where the app's environment is set (on Render: the service's Shell tab):
+
+```bash
+python -m src.scripts.set_admin_password owner@example.com
+```
+
+It prompts for the password twice. The email must already be an admin (listed in `ADMIN_EMAILS`, app
+restarted). Setting it signs out that admin's sessions and voids any unused links.
+
 **Note**: Emails are sent through Brevo. You need to:
 1. Create an API key in Brevo (SMTP & API → API Keys) and set it as `BREVO_API_KEY`
 2. Verify the `SENDER_EMAIL` address (or its domain) as a sender in Brevo
