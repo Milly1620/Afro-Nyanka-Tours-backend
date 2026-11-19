@@ -35,6 +35,28 @@ def _price_context(booking_summary: dict) -> dict:
     }
 
 
+# Customer emails about a booking: on submit ("pending"), then when an admin confirms or cancels it.
+# Tour bookings get "Multi-Tour " in front of the title.
+CUSTOMER_BOOKING_EMAILS = {
+    "pending": {
+        "title": "Booking Confirmation Pending",
+        "intro": "Thank you for booking with Afro Nyanka Tours! We have received your booking "
+                 "and it is waiting to be confirmed.",
+        "closing": "We will contact you shortly to confirm your booking and share a detailed itinerary.",
+    },
+    "confirmed": {
+        "title": "Booking Confirmation",
+        "intro": "Great news! Your booking with Afro Nyanka Tours is confirmed.",
+        "closing": "We look forward to travelling with you.",
+    },
+    "cancelled": {
+        "title": "Booking Cancelled",
+        "intro": "Your booking with Afro Nyanka Tours has been cancelled.",
+        "closing": "If you think this is a mistake or would like to rebook, please get in touch.",
+    },
+}
+
+
 class EmailService:
     BREVO_SEND_URL = "https://api.brevo.com/v3/smtp/email"
 
@@ -106,13 +128,26 @@ class EmailService:
             return False
 
     def send_booking_confirmation(self, booking: Booking, booking_summary: dict, company: Optional[dict] = None):
-        """Send booking confirmation email to customer"""
+        """Email the customer that their booking was received and awaits confirmation."""
+        return self._send_customer_booking_email("pending", booking, booking_summary, company)
+
+    def send_booking_status_update(
+        self, booking: Booking, booking_summary: dict, new_status: str, company: Optional[dict] = None
+    ):
+        """Email the customer when an admin confirms or cancels their booking."""
+        return self._send_customer_booking_email(new_status, booking, booking_summary, company)
+
+    def _send_customer_booking_email(
+        self, kind: str, booking: Booking, booking_summary: dict, company: Optional[dict]
+    ):
         event = booking_summary.get("event")
-        subject = (
-            f"Booking Confirmation - {event['name']}"
-            if event
-            else f"Multi-Tour Booking Confirmation - {len(booking.booking_tours)} Tours Selected"
-        )
+        copy = CUSTOMER_BOOKING_EMAILS[kind]
+        title = copy["title"] if event else f"Multi-Tour {copy['title']}"
+        if event:
+            subject = f"{title} - {event['name']}"
+        else:
+            tours = booking_summary["total_tours"]
+            subject = f"{title} - {tours} Tour{'s' if tours != 1 else ''} Selected"
         
         html_template = """
         <!DOCTYPE html>
@@ -128,8 +163,8 @@ class EmailService:
                 .location-list { margin: 10px 0; padding-left: 20px; }
                 .location-item { margin: 5px 0; }
                 .footer { text-align: center; padding: 20px; color: #666; }
-                .summary-stats { display: flex; justify-content: space-around; margin: 20px 0; }
-                .stat { text-align: center; }
+                .summary-stats { width: 100%; margin: 20px 0; border-collapse: collapse; }
+                .stat { text-align: center; width: 33%; padding: 0 8px; }
                 .stat-number { font-size: 24px; font-weight: bold; color: #2E8B57; }
                 .stat-label { font-size: 14px; color: #666; }
             </style>
@@ -138,26 +173,31 @@ class EmailService:
             <div class="container">
                 <div class="header">
                     <h1>Afro Nyanka Tours</h1>
-                    <h2>Multi-Tour Booking Confirmation</h2>
+                    <h2>{{ title }}</h2>
                 </div>
                 <div class="content">
                     <p>Dear {{ customer_name }},</p>
-                    <p>Thank you for your exciting multi-tour booking with Afro Nyanka Tours! Your personalized travel experience has been received and is being processed.</p>
-                    
-                    <div class="summary-stats">
-                        <div class="stat">
-                            <div class="stat-number">{{ total_tours }}</div>
-                            <div class="stat-label">Tours Selected</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-number">{{ total_locations }}</div>
-                            <div class="stat-label">Locations</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-number">{{ number_of_people }}</div>
-                            <div class="stat-label">People</div>
-                        </div>
-                    </div>
+                    <p>{{ intro }}</p>
+
+                    {% if not event %}
+                    <!-- A table, not flexbox: Gmail and Outlook ignore flex and run the labels together -->
+                    <table class="summary-stats" role="presentation">
+                        <tr>
+                            <td class="stat">
+                                <div class="stat-number">{{ total_tours }}</div>
+                                <div class="stat-label">Tours Selected</div>
+                            </td>
+                            <td class="stat">
+                                <div class="stat-number">{{ total_locations }}</div>
+                                <div class="stat-label">Locations</div>
+                            </td>
+                            <td class="stat">
+                                <div class="stat-number">{{ number_of_people }}</div>
+                                <div class="stat-label">People</div>
+                            </td>
+                        </tr>
+                    </table>
+                    {% endif %}
                     
                     <div class="booking-details">
                         <h3>Customer Details:</h3>
@@ -183,7 +223,9 @@ class EmailService:
                         <p><strong>Total:</strong> {{ amount_display }}</p>
                     </div>
 
+                    {% if tours_and_locations %}
                     <h3>Your Selected Tours & Locations:</h3>
+                    {% endif %}
                     {% for tour in tours_and_locations %}
                     <div class="tour-section">
                         <h4>{{ loop.index }}. {{ tour.tour_name }} ({{ tour.country }})</h4>
@@ -197,8 +239,8 @@ class EmailService:
                     </div>
                     {% endfor %}
                     
-                    <p>We will contact you shortly to confirm your booking and provide a detailed itinerary for your multi-tour experience.</p>
-                    <p>If you have any questions, please don't hesitate to contact us.</p>
+                    <p>{{ closing }}</p>
+                    <p>If you have any questions, just reply to this email.</p>
                 </div>
                 <div class="footer">
                     <p>Best regards,<br>{{ company.company_name }} Team</p>
@@ -213,6 +255,9 @@ class EmailService:
         
         template = Template(html_template)
         html_content = template.render(
+            title=title,
+            intro=copy["intro"],
+            closing=copy["closing"],
             customer_name=booking.customer_name,
             start_date=booking.start_date.strftime("%B %d, %Y") if booking.start_date else "To be confirmed",
             end_date=booking.end_date.strftime("%B %d, %Y") if booking.end_date else "To be confirmed",

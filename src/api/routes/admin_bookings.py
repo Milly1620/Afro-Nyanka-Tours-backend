@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -15,6 +15,11 @@ from src.schemas.admin_schemas import (
     BookingStatusUpdate,
 )
 from src.services.booking_status import BOOKING_STATUSES, booking_display_name, booking_reference, change_status
+from src.services.email_service import email_service
+from src.services.site_settings import company_context, get_site_settings
+
+# Statuses the customer is emailed about. "paid" is left out: payment is arranged with the customer directly.
+CUSTOMER_EMAIL_STATUSES = {"confirmed", "cancelled"}
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
@@ -75,6 +80,20 @@ def get_booking(booking_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{booking_id}/status", response_model=AdminBookingListItem)
-def update_status(booking_id: int, body: BookingStatusUpdate, db: Session = Depends(get_db)):
+def update_status(
+    booking_id: int,
+    body: BookingStatusUpdate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     booking = change_status(db, _get_or_404(db, booking_id), body.status)
+    site = get_site_settings(db)
+    if booking.status in CUSTOMER_EMAIL_STATUSES and site.notify_booking_confirmation:
+        background_tasks.add_task(
+            email_service.send_booking_status_update,
+            booking,
+            crud.get_booking_summary(db, booking),
+            booking.status,
+            company_context(site),
+        )
     return _to_item(booking)
