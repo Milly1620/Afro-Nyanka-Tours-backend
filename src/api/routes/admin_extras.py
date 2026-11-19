@@ -21,10 +21,11 @@ def get_extra_or_404(db: Session, extra_id: int) -> models.Extra:
 
 
 def attach_extra(db: Session, extra: models.Extra, body: AttachExtraRequest, *, tour_id=None, event_id=None) -> None:
-    """Upsert the extra's price on one tour or event (defaults to the catalog price)."""
+    """Upsert the extra's price on one tour or event (defaults to the catalog price).
+
+    With no price and no catalog price, the extra is "price on request".
+    """
     price = body.price_ghs if body.price_ghs is not None else extra.default_price_ghs
-    if price is None:
-        raise HTTPException(status_code=422, detail="Set a price for this extra")
     constraint = "uq_extra_prices_extra_tour" if tour_id is not None else "uq_extra_prices_extra_event"
     stmt = insert(models.ExtraPrice).values(extra_id=extra.id, tour_id=tour_id, event_id=event_id, price_ghs=price)
     db.execute(

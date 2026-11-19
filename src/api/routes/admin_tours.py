@@ -58,6 +58,9 @@ def get_tour(tour_id: int, db: Session = Depends(get_db)):
 def create_tour(body: AdminTourCreate, db: Session = Depends(get_db)):
     assert_publishable(body.price_ghs, body.status, body.publish_at)
     tour = models.Tour(**{f: getattr(body, f) for f in NON_LOCATION_FIELDS}, is_active=body.status != "draft")
+    # Every admin-created tour is popular: the public country pages list only popular tours.
+    # It can still be turned off afterwards with PATCH.
+    tour.is_popular = True
     db.add(tour)
     db.flush()
     _replace_locations(db, tour, body.location_ids)

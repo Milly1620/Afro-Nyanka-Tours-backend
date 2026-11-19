@@ -133,3 +133,18 @@ def test_gallery_images_stored_as_json_text_serialise(client, db):
     r = client.get(f"/api/tours/{tour.id}")
     assert r.status_code == 200, r.text
     assert r.json()["gallery_images"] == ["https://a/x.jpg"]
+
+
+def test_admin_created_tour_is_popular(client, admin_headers):
+    """Every admin-created tour is popular, so it shows on the country pages (which list popular tours)."""
+    for sent in ({}, {"is_popular": False}):
+        body = {"name": "Volta Falls", "country": "Ghana", "status": "draft", **sent}
+        r = client.post(BASE, json=body, headers=admin_headers)
+        assert r.status_code == 201, r.text
+        assert r.json()["is_popular"] is True
+
+
+def test_admin_can_unmark_popular_after_create(client, admin_headers):
+    tour_id = client.post(BASE, json={"name": "Volta Falls", "country": "Ghana"}, headers=admin_headers).json()["id"]
+    r = client.patch(f"{BASE}/{tour_id}", json={"is_popular": False}, headers=admin_headers)
+    assert r.json()["is_popular"] is False

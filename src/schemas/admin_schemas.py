@@ -45,7 +45,7 @@ class AdminTourCreate(BaseModel):
     highlights: List[str] = []
     status: PublishStatus = "draft"
     publish_at: Optional[datetime] = None
-    is_popular: bool = False
+    is_popular: bool = True  # ignored: admin-created tours are always popular
     location_ids: List[int] = []
 
 
@@ -70,7 +70,7 @@ class AdminExtraPrice(BaseModel):
     extra_id: int
     name: str
     description: Optional[str] = None
-    price_ghs: int
+    price_ghs: Optional[int] = None  # None = price on request
     is_active: bool
 
 
@@ -145,10 +145,27 @@ class AttachExtraRequest(BaseModel):
     price_ghs: Optional[int] = Field(None, ge=0)
 
 
+def clean_countries(countries: Optional[List[str]], country: Optional[str]) -> List[str]:
+    """An event's countries: trimmed, without blanks or repeats, in the order given.
+
+    `countries` wins; a single `country` string (older clients) may hold several, comma-separated.
+    """
+    raw = countries if countries is not None else (country or "").split(",")
+    out: List[str] = []
+    for name in raw:
+        name = name.strip()
+        if name and name.lower() not in (c.lower() for c in out):
+            out.append(name)
+    if not out:
+        raise ValueError("An event needs at least one country")
+    return out
+
+
 class AdminEventCreate(BaseModel):
     name: str = Field(..., min_length=1)
     description: Optional[str] = None
-    country: str = Field(..., min_length=1)
+    countries: Optional[List[str]] = None  # e.g. ["Ghana", "Togo", "Benin"]
+    country: Optional[str] = None  # older clients: one country, or several comma-separated
     region: Optional[str] = None
     destination: Optional[str] = None
     start_date: date
@@ -165,12 +182,15 @@ class AdminEventCreate(BaseModel):
     def _dates_in_order(self):
         if self.end_date < self.start_date:
             raise ValueError("end_date must be on or after start_date")
+        self.countries = clean_countries(self.countries, self.country)
+        self.country = ", ".join(self.countries)
         return self
 
 
 class AdminEventUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = None
+    countries: Optional[List[str]] = None
     country: Optional[str] = Field(None, min_length=1)
     region: Optional[str] = None
     destination: Optional[str] = None

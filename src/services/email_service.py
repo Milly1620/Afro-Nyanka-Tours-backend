@@ -17,6 +17,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _amount_display(amount: Optional[int], extras: list) -> str:
+    if amount is None:
+        return "Price to be confirmed"
+    if any(e.get("price_ghs") is None for e in extras):
+        return f"GHS {amount:,} + items priced on request"
+    return f"GHS {amount:,}"
+
+
 def _price_context(booking_summary: dict) -> dict:
     """Template values for the booking reference, extras and total."""
     amount = booking_summary.get("amount_ghs")
@@ -31,7 +39,7 @@ def _price_context(booking_summary: dict) -> dict:
         "event": event,
         "reference": booking_summary.get("reference", ""),
         "extras": booking_summary.get("extras", []),
-        "amount_display": f"GHS {amount:,}" if amount is not None else "Price to be confirmed",
+        "amount_display": _amount_display(amount, booking_summary.get("extras", [])),
     }
 
 
@@ -218,7 +226,7 @@ class EmailService:
                         <p><strong>Dates:</strong> {{ event.start_display }} - {{ event.end_display }}</p>
                         {% endif %}
                         {% for extra in extras %}
-                        <p>{{ extra.name }}: GHS {{ "{:,}".format(extra.price_ghs) }}</p>
+                        <p>{{ extra.name }}: {% if extra.price_ghs is none %}Price on request{% else %}GHS {{ "{:,}".format(extra.price_ghs) }}{% endif %}</p>
                         {% endfor %}
                         <p><strong>Total:</strong> {{ amount_display }}</p>
                     </div>
@@ -552,7 +560,7 @@ class EmailService:
                         <p><strong>Dates:</strong> {{ event.start_display }} - {{ event.end_display }}</p>
                         {% endif %}
                         {% for extra in extras %}
-                        <p>{{ extra.name }}: GHS {{ "{:,}".format(extra.price_ghs) }}</p>
+                        <p>{{ extra.name }}: {% if extra.price_ghs is none %}Price on request{% else %}GHS {{ "{:,}".format(extra.price_ghs) }}{% endif %}</p>
                         {% endfor %}
                         <p><strong>Total:</strong> {{ amount_display }}</p>
                     </div>

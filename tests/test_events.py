@@ -147,3 +147,70 @@ def test_event_image_uploads(client, db, admin_headers, monkeypatch):
     r = client.request("DELETE", f"{ADMIN}/{event.id}/remove-gallery-image", data={"image_url": url}, headers=admin_headers)
     assert r.status_code == 200, r.text
     assert client.get(f"{ADMIN}/{event.id}", headers=admin_headers).json()["gallery_images"] == []
+
+
+# --- duration and highlights -------------------------------------------------
+
+def test_duration_calculated_from_dates_on_create(client, admin_headers):
+    # 40th to 46th day inclusive is 7 days; a client-sent duration is ignored
+    r = _create(client, admin_headers, duration_days=99)
+    assert r.status_code == 201, r.text
+    assert r.json()["duration_days"] == 7
+
+
+def test_one_day_event_lasts_one_day(client, admin_headers):
+    r = _create(client, admin_headers, start_date=str(days(40)), end_date=str(days(40)))
+    assert r.json()["duration_days"] == 1
+
+
+def test_duration_recalculated_when_dates_change(client, admin_headers):
+    event_id = _create(client, admin_headers).json()["id"]
+    r = client.patch(f"{ADMIN}/{event_id}", json={"end_date": str(days(41))}, headers=admin_headers)
+    assert r.json()["duration_days"] == 2
+    r = client.patch(f"{ADMIN}/{event_id}", json={"duration_days": 30}, headers=admin_headers)
+    assert r.json()["duration_days"] == 2
+
+
+def test_six_highlights_all_returned(client, admin_headers):
+    six = [f"Highlight {n}" for n in range(1, 7)]
+    r = _create(client, admin_headers, highlights=six, price_ghs=100, status="published")
+    assert r.json()["highlights"] == six
+    event_id = r.json()["id"]
+    assert client.get(f"{ADMIN}/{event_id}", headers=admin_headers).json()["highlights"] == six
+    assert client.get(f"/api/events/{event_id}").json()["highlights"] == six
+    assert next(e for e in client.get("/api/events/").json() if e["id"] == event_id)["highlights"] == six
+    r = client.patch(f"{ADMIN}/{event_id}", json={"highlights": six[:4]}, headers=admin_headers)
+    assert r.json()["highlights"] == six[:4]
+
+
+# --- several countries ---------------------------------------------------------
+
+def test_event_in_several_countries(client, admin_headers):
+    r = _create(client, admin_headers, country=None, countries=["Ghana", " Togo ", "Benin", "Togo"],
+                price_ghs=100, status="published")
+    assert r.status_code == 201, r.text
+    assert r.json()["countries"] == ["Ghana", "Togo", "Benin"]
+    assert r.json()["country"] == "Ghana, Togo, Benin"
+    event_id = r.json()["id"]
+    assert client.get(f"/api/events/{event_id}").json()["countries"] == ["Ghana", "Togo", "Benin"]
+
+
+def test_single_country_still_accepted(client, admin_headers):
+    r = _create(client, admin_headers, country="Ghana")
+    assert r.json()["countries"] == ["Ghana"]
+    assert r.json()["country"] == "Ghana"
+
+
+def test_event_needs_a_country(client, admin_headers):
+    assert _create(client, admin_headers, country=None, countries=[]).status_code == 422
+    assert _create(client, admin_headers, country=None, countries=["  "]).status_code == 422
+
+
+def test_patch_event_countries(client, admin_headers):
+    event_id = _create(client, admin_headers, country="Ghana").json()["id"]
+    r = client.patch(f"{ADMIN}/{event_id}", json={"countries": ["Ghana", "Côte d'Ivoire"]}, headers=admin_headers)
+    assert r.json()["countries"] == ["Ghana", "Côte d'Ivoire"]
+    assert r.json()["country"] == "Ghana, Côte d'Ivoire"
+    r = client.patch(f"{ADMIN}/{event_id}", json={"country": "Togo"}, headers=admin_headers)
+    assert r.json()["countries"] == ["Togo"]
+    assert client.patch(f"{ADMIN}/{event_id}", json={"countries": []}, headers=admin_headers).status_code == 422

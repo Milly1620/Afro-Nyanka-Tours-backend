@@ -153,3 +153,17 @@ def test_emails_say_price_to_be_confirmed_when_unpriced(client, db, sent_emails)
     tour = make_tour(db, price_ghs=None)
     _book(client, tour)
     assert all("Price to be confirmed" in e["html"] for e in sent_emails)
+
+
+def test_price_on_request_extra_left_out_of_total(client, db, sent_emails):
+    tour = make_tour(db, price_ghs=100)
+    priced, on_request = make_extra(db, name="Guide"), make_extra(db, name="Helicopter")
+    price_extra(db, priced, tour=tour, price_ghs=50)
+    price_extra(db, on_request, tour=tour, price_ghs=None)
+    r = _book(client, tour, number_of_people=2, extras=[{"extra_id": priced.id}, {"extra_id": on_request.id}])
+    assert r.status_code == 200, r.text
+    assert r.json()["booking"]["amount_ghs"] == 250
+    assert {e["name"]: e["price_ghs"] for e in r.json()["summary"]["extras"]} == {"Guide": 50, "Helicopter": None}
+    customer = next(m for m in sent_emails if m["to"] == "millie@example.com")
+    assert "Helicopter: Price on request" in customer["html"]
+    assert "GHS 250 + items priced on request" in customer["html"]

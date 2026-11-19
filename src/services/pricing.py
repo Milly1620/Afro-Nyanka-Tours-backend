@@ -77,7 +77,7 @@ def price_booking(
                 name=price.extra.name, price_ghs=price.price_ghs,
             )
         )
-        extras_total += price.price_ghs
+        extras_total += price.price_ghs or 0  # price on request: quoted later, not in the total
 
     offerings = [event] if event is not None else tours
     if any(o.price_ghs is None for o in offerings):

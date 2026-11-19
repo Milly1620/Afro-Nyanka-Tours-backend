@@ -16,6 +16,7 @@ from src.schemas.admin_schemas import (
     AdminEventList,
     AdminEventUpdate,
     AttachExtraRequest,
+    clean_countries,
 )
 from src.schemas.schemas import ImageUploadResponse, MultipleImageUploadResponse, parse_gallery
 from src.services.cloudinary_service import cloudinary_service, public_id_from_url
@@ -28,9 +29,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(require_admin)])
 
 FIELDS = (
-    "name", "description", "country", "region", "destination", "start_date", "end_date",
-    "duration_days", "price_ghs", "capacity", "highlights", "status", "publish_at",
-)
+    "name", "description", "countries", "country", "region", "destination", "start_date", "end_date",
+    "price_ghs", "capacity", "highlights", "status", "publish_at",
+)  # duration_days is not here: it is calculated from the dates
 
 
 def _get_or_404(db: Session, event_id: int) -> models.Event:
@@ -45,6 +46,11 @@ def _admin(db: Session, event: models.Event, booked: Optional[int] = None) -> Ad
     out.seats_booked = seats_booked(db, [event.id])[event.id] if booked is None else booked
     out.seats_left = seats_left(event, out.seats_booked)
     return out
+
+
+def _set_duration(event: models.Event) -> None:
+    """Duration is always worked out from the dates, counting both ends: 15th to 17th is 3 days."""
+    event.duration_days = (event.end_date - event.start_date).days + 1
 
 
 def _replace_locations(db: Session, event: models.Event, location_ids: list[int]) -> None:
@@ -84,6 +90,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
 def create_event(body: AdminEventCreate, db: Session = Depends(get_db)):
     assert_publishable(body.price_ghs, body.status, body.publish_at)
     event = models.Event(**{f: getattr(body, f) for f in FIELDS})
+    _set_duration(event)
     db.add(event)
     db.flush()
     _replace_locations(db, event, body.location_ids)
@@ -109,6 +116,12 @@ def update_event(event_id: int, body: AdminEventUpdate, db: Session = Depends(ge
     location_ids = changes.pop("location_ids", None)
     if changes.get("highlights", ...) is None:
         changes["highlights"] = []
+    if "countries" in changes or "country" in changes:
+        try:
+            changes["countries"] = clean_countries(changes.get("countries"), changes.get("country"))
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        changes["country"] = ", ".join(changes["countries"])
     for field in ("name", "country", "status", "start_date", "end_date"):
         if field in changes and changes[field] is None:
             raise HTTPException(status_code=422, detail=f"{field} cannot be null")
@@ -118,6 +131,7 @@ def update_event(event_id: int, body: AdminEventUpdate, db: Session = Depends(ge
         setattr(event, field, value)
     if event.end_date < event.start_date:
         raise HTTPException(status_code=422, detail="end_date must be on or after start_date")
+    _set_duration(event)
     if {"status", "price_ghs", "publish_at"} & changes.keys():
         assert_publishable(event.price_ghs, event.status, event.publish_at)
     if location_ids is not None:

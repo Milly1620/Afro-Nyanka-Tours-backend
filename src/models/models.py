@@ -202,7 +202,7 @@ class ExtraPrice(Base):
     extra_id = Column(Integer, ForeignKey("extras.id"), nullable=False, index=True)
     tour_id = Column(Integer, ForeignKey("tours.id"), index=True)
     event_id = Column(Integer, ForeignKey("events.id"), index=True)
-    price_ghs = Column(Integer, nullable=False)
+    price_ghs = Column(Integer)  # NULL = price on request
 
     extra = relationship("Extra", back_populates="prices", lazy="joined")
     tour = relationship("Tour", back_populates="extra_prices")
@@ -220,7 +220,7 @@ class BookingExtra(Base):
     tour_id = Column(Integer, ForeignKey("tours.id"))
     event_id = Column(Integer, ForeignKey("events.id"))
     name = Column(String, nullable=False)
-    price_ghs = Column(Integer, nullable=False)
+    price_ghs = Column(Integer)  # NULL = price on request, not in amount_ghs
 
     booking = relationship("Booking", back_populates="booking_extras")
 
@@ -237,7 +237,8 @@ class Event(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     description = Column(Text)
-    country = Column(String, nullable=False)
+    countries = Column(JSON, nullable=False, server_default="[]", default=list)  # e.g. ["Ghana", "Togo"]
+    country = Column(String, nullable=False)  # countries joined for display: "Ghana, Togo"
     region = Column(String)
     destination = Column(String)
     start_date = Column(Date, nullable=False, index=True)

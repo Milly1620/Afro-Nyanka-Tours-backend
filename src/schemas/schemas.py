@@ -77,7 +77,7 @@ class PublicExtra(BaseModel):
     extra_id: int
     name: str
     description: Optional[str] = None
-    price_ghs: int
+    price_ghs: Optional[int] = None  # None = price on request
 
 
 class TourCreate(TourBase):
@@ -394,6 +394,7 @@ class PublicEvent(BaseModel):
     country: str
     region: Optional[str] = None
     destination: Optional[str] = None
+    countries: List[str] = []
     start_date: date
     end_date: date
     duration_days: Optional[int] = None

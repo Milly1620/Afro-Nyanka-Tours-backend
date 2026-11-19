@@ -66,9 +66,13 @@ def test_attach_uses_default_price_when_omitted(client, db, admin_headers):
     assert _public_extras(client, tour)[0]["price_ghs"] == 800
 
 
-def test_attach_without_any_price_422(client, db, admin_headers):
+def test_attach_without_any_price_is_price_on_request(client, db, admin_headers):
     tour, extra = make_tour(db), make_extra(db, default_price_ghs=None)
-    assert client.put(f"/api/admin/tours/{tour.id}/extras/{extra.id}", json={}, headers=admin_headers).status_code == 422
+    r = client.put(f"/api/admin/tours/{tour.id}/extras/{extra.id}", json={}, headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert _public_extras(client, tour)[0]["price_ghs"] is None
+    admin = client.get(f"/api/admin/tours/{tour.id}", headers=admin_headers).json()
+    assert admin["extras"][0]["price_ghs"] is None
 
 
 def test_attach_unknown_tour_or_extra_404(client, db, admin_headers):
