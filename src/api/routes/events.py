@@ -1,13 +1,14 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.database.database import get_db
 from src.models import models
 from src.schemas.schemas import PublicEvent
+from src.services.countries import event_in_countries
 from src.services.events import seats_booked, seats_left
 from src.services.visibility import visible_filter
 
@@ -21,12 +22,18 @@ def _public(event: models.Event, booked: int) -> PublicEvent:
 
 
 @router.get("/", response_model=List[PublicEvent])
-def list_upcoming_events(db: Session = Depends(get_db)):
-    events = db.scalars(
+def list_upcoming_events(
+    country: Optional[List[str]] = Query(None, description="Repeat to match any of several: ?country=Ghana&country=Togo"),
+    db: Session = Depends(get_db),
+):
+    query = (
         select(models.Event)
         .where(visible_filter(models.Event), models.Event.end_date >= date.today())
         .order_by(models.Event.start_date, models.Event.id)
-    ).all()
+    )
+    if country:
+        query = query.where(event_in_countries(country))
+    events = db.scalars(query).all()
     booked = seats_booked(db, [e.id for e in events])
     return [_public(e, booked[e.id]) for e in events]
 

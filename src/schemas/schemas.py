@@ -1,6 +1,7 @@
 import json
 
 from pydantic import BaseModel, EmailStr, Field, computed_field, field_validator, model_validator
+from src.services.countries import required_country
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 
@@ -26,7 +27,7 @@ class LocationBase(BaseModel):
 
 
 class LocationCreate(LocationBase):
-    pass
+    _country = field_validator("country")(lambda cls, v: required_country(v))
 
 
 class Location(LocationBase):

@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from src.schemas.schemas import Booking, PublicEvent, Tour
+from src.services.countries import normalise_country, required_country
 
 PublishStatus = Literal["draft", "published", "scheduled"]
 
@@ -48,6 +49,8 @@ class AdminTourCreate(BaseModel):
     is_popular: bool = True  # ignored: admin-created tours are always popular
     location_ids: List[int] = []
 
+    _country = field_validator("country")(lambda cls, v: required_country(v))
+
 
 class AdminTourUpdate(BaseModel):
     """Partial update: only fields present in the request are changed."""
@@ -64,6 +67,8 @@ class AdminTourUpdate(BaseModel):
     publish_at: Optional[datetime] = None
     is_popular: Optional[bool] = None
     location_ids: Optional[List[int]] = None
+
+    _country = field_validator("country")(lambda cls, v: v if v is None else required_country(v))
 
 
 class AdminExtraPrice(BaseModel):
@@ -146,15 +151,15 @@ class AttachExtraRequest(BaseModel):
 
 
 def clean_countries(countries: Optional[List[str]], country: Optional[str]) -> List[str]:
-    """An event's countries: trimmed, without blanks or repeats, in the order given.
+    """An event's countries: capitalised, without blanks or repeats, in the order given.
 
     `countries` wins; a single `country` string (older clients) may hold several, comma-separated.
     """
     raw = countries if countries is not None else (country or "").split(",")
     out: List[str] = []
     for name in raw:
-        name = name.strip()
-        if name and name.lower() not in (c.lower() for c in out):
+        name = normalise_country(name)
+        if name and name not in out:
             out.append(name)
     if not out:
         raise ValueError("An event needs at least one country")

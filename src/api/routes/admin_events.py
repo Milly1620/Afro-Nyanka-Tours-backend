@@ -19,6 +19,7 @@ from src.schemas.admin_schemas import (
     clean_countries,
 )
 from src.schemas.schemas import ImageUploadResponse, MultipleImageUploadResponse, parse_gallery
+from src.services.countries import event_in_countries
 from src.services.cloudinary_service import cloudinary_service, public_id_from_url
 from src.services.events import seats_booked, seats_left
 from src.services.locations import replace_locations
@@ -66,6 +67,7 @@ def _save(db: Session, event: models.Event) -> None:
 @router.get("", response_model=AdminEventList)
 def list_events(
     status_filter: Optional[str] = Query(None, alias="status"),
+    country: Optional[List[str]] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
@@ -73,6 +75,8 @@ def list_events(
     query = select(models.Event).order_by(models.Event.start_date.desc(), models.Event.id.desc())
     if status_filter:
         query = query.where(models.Event.status == status_filter)
+    if country:
+        query = query.where(event_in_countries(country))
     events = db.scalars(query.offset(skip).limit(limit)).all()
     booked = seats_booked(db, [e.id for e in events])
     by_status = dict(db.execute(select(models.Event.status, func.count()).group_by(models.Event.status)).all())
