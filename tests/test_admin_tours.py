@@ -36,8 +36,11 @@ def test_admin_get_draft_includes_status(client, db, admin_headers):
     assert "publish_at" in body
 
 
-def test_create_published_without_price_422(client, admin_headers):
-    assert _create(client, admin_headers, status="published").status_code == 422
+def test_create_published_without_price_ok(client, admin_headers):
+    """Tour prices are optional: an unpriced tour is "price on request"."""
+    r = _create(client, admin_headers, status="published")
+    assert r.status_code == 201, r.text
+    assert r.json()["price_ghs"] is None and r.json()["status"] == "published"
 
 
 def test_create_scheduled_without_publish_at_422(client, admin_headers):
@@ -80,18 +83,21 @@ def test_edit_grandfathered_unpriced_tour_description_ok(client, db, admin_heade
     assert r.json()["description"] == "New copy"
 
 
-def test_patch_status_to_published_requires_price(client, db, admin_headers):
-    tour = make_tour(db, status="draft")
+def test_patch_status_to_published_without_price_ok(client, db, admin_headers):
+    tour = make_tour(db, status="draft", price_ghs=None)
     r = client.patch(f"{BASE}/{tour.id}", json={"status": "published"}, headers=admin_headers)
-    assert r.status_code == 422
-    r = client.patch(f"{BASE}/{tour.id}", json={"status": "published", "price_ghs": 3200}, headers=admin_headers)
     assert r.status_code == 200, r.text
 
 
-def test_patch_clearing_price_on_published_422(client, db, admin_headers):
+def test_patch_clearing_price_on_published_ok(client, db, admin_headers):
     tour = make_tour(db, status="published", price_ghs=3200)
     r = client.patch(f"{BASE}/{tour.id}", json={"price_ghs": None}, headers=admin_headers)
-    assert r.status_code == 422
+    assert r.status_code == 200, r.text
+    assert r.json()["price_ghs"] is None
+
+
+def test_scheduled_tour_still_needs_publish_at(client, admin_headers):
+    assert _create(client, admin_headers, status="scheduled").status_code == 422
 
 
 def test_patch_location_ids_replaces_stops_in_order(client, db, admin_headers):

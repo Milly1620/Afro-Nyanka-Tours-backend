@@ -56,7 +56,7 @@ def get_tour(tour_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=AdminTour, status_code=status.HTTP_201_CREATED)
 def create_tour(body: AdminTourCreate, db: Session = Depends(get_db)):
-    assert_publishable(body.price_ghs, body.status, body.publish_at)
+    assert_publishable(body.price_ghs, body.status, body.publish_at, require_price=False)
     tour = models.Tour(**{f: getattr(body, f) for f in NON_LOCATION_FIELDS}, is_active=body.status != "draft")
     # Every admin-created tour is popular: the public country pages list only popular tours.
     # It can still be turned off afterwards with PATCH.
@@ -82,10 +82,10 @@ def update_tour(tour_id: int, body: AdminTourUpdate, db: Session = Depends(get_d
     for field, value in changes.items():
         setattr(tour, field, value)
     tour.is_active = tour.status != "draft"  # legacy field, kept in step with status
-    # Only re-check publish rules when they're being changed, so existing
-    # unpriced published tours can still be edited.
-    if {"status", "price_ghs", "publish_at"} & changes.keys():
-        assert_publishable(tour.price_ghs, tour.status, tour.publish_at)
+    # Tour prices are optional (no price = "price on request"); only the
+    # scheduled-needs-publish_at rule applies.
+    if {"status", "publish_at"} & changes.keys():
+        assert_publishable(tour.price_ghs, tour.status, tour.publish_at, require_price=False)
     if location_ids is not None:
         _replace_locations(db, tour, location_ids)
     db.commit()

@@ -13,9 +13,10 @@ def visible_filter(model) -> ColumnElement[bool]:
     )
 
 
-def assert_publishable(price_ghs, status: str, publish_at) -> None:
-    """Published/scheduled items need a price; scheduled items need a publish time."""
-    if status in ("published", "scheduled") and price_ghs is None:
+def assert_publishable(price_ghs, status: str, publish_at, require_price: bool = True) -> None:
+    """Published/scheduled items need a price (unless require_price is False, as for
+    tours, where no price means "price on request"); scheduled items need a publish time."""
+    if require_price and status in ("published", "scheduled") and price_ghs is None:
         raise HTTPException(
             status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Set a price before publishing",

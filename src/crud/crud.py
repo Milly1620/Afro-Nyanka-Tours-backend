@@ -11,7 +11,7 @@ from src.services.booking_status import booking_reference, record_created
 from src.services.events import seats_booked, seats_left
 from src.services.locations import replace_locations
 from src.services.pricing import price_booking
-from src.services.visibility import assert_publishable, visible_filter
+from src.services.visibility import visible_filter
 from typing import List, Optional, Dict
 
 
@@ -51,9 +51,8 @@ def get_countries_with_tours(db: Session) -> List[str]:
 
 
 def create_tour(db: Session, tour: schemas.TourCreate) -> models.Tour:
-    """Legacy create: is_active=True publishes the tour (which needs a price), False keeps it a draft."""
+    """Legacy create: is_active=True publishes the tour, False keeps it a draft. Price is optional."""
     status = "published" if tour.is_active else "draft"
-    assert_publishable(tour.price_ghs, status, None)
     db_tour = models.Tour(
         name=tour.name,
         description=tour.description,

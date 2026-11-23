@@ -143,9 +143,11 @@ def test_legacy_create_inactive_tour_is_draft(client, admin_headers):
     assert r.json()["id"] not in [t["id"] for t in client.get("/api/tours/").json()]
 
 
-def test_legacy_create_active_unpriced_tour_rejected(client, admin_headers):
+def test_legacy_create_active_unpriced_tour_published(client, admin_headers):
+    """Tour prices are optional: an unpriced tour is "price on request"."""
     r = client.post("/api/tours/", json={"name": "No price", "country": "Ghana"}, headers=admin_headers)
-    assert r.status_code == 422
+    assert r.status_code == 200, r.text
+    assert r.json()["price_ghs"] is None and r.json()["is_active"] is True
 
 
 def test_admin_status_change_keeps_is_active_in_sync(client, db, admin_headers):
