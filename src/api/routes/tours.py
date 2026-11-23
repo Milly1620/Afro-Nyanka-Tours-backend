@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
+from src.services.countries import country_options
 from src.database.database import get_db
 from src.api.deps import require_admin
 from src.schemas import schemas
@@ -47,6 +48,12 @@ def get_countries_with_tours(db: Session = Depends(get_db)):
 def create_tour(tour: schemas.TourCreate, db: Session = Depends(get_db)):
     """Create a new tour (admin only)"""
     return crud.create_tour(db=db, tour=tour)
+
+
+@router.get("/countries/options")
+def get_country_options():
+    """Countries for dropdowns: the name to save, plus other spellings that also match."""
+    return country_options()
 
 
 @router.get("/locations/", response_model=List[schemas.Location])

@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from src.services.countries import country_column_matches
 from src.models import models
 from src.schemas import schemas
 from src.services.booking_status import booking_reference, record_created
@@ -31,11 +32,11 @@ def get_tour_any(db: Session, tour_id: int) -> Optional[models.Tour]:
 def get_tours_by_country(db: Session, country: str, is_popular: bool = True) -> List[models.Tour]:
     if not is_popular:
         return db.query(models.Tour).filter(
-            models.Tour.country.ilike(f"%{country}%"),
+            country_column_matches(models.Tour.country, country),
             visible_filter(models.Tour)
         ).all()
     return db.query(models.Tour).filter(
-        models.Tour.country.ilike(f"%{country}%"),
+        country_column_matches(models.Tour.country, country),
         visible_filter(models.Tour),
         models.Tour.is_popular == True
     ).all()
@@ -277,7 +278,7 @@ def get_tour_locations(db: Session, tour_id: int) -> List[models.Location]:
 def get_locations_by_country(db: Session, country: str) -> List[models.Location]:
     """Get all locations by country in random order"""
     return db.query(models.Location).filter(
-        models.Location.country.ilike(f"%{country}%")
+        country_column_matches(models.Location.country, country)
     ).order_by(func.random()).all()
 
 
@@ -287,7 +288,7 @@ def get_tour_locations_by_country(db: Session, country: str) -> List[models.Loca
         models.TourLocation
     ).filter(
         # models.TourLocation.tour_id == tour_id,
-        models.Location.country.ilike(f"%{country}%")
+        country_column_matches(models.Location.country, country)
     ).order_by(func.random()).all()
 
 

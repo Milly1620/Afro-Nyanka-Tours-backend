@@ -67,3 +67,46 @@ def test_admin_events_filtered_by_country(client, db, admin_headers):
     make_event(db, name="Ouaga", countries=["Burkina Faso"], country="Burkina Faso")
     body = client.get(f"{ADMIN_EVENTS}?country=togo", headers=admin_headers).json()
     assert [e["name"] for e in body["items"]] == ["Trail"]
+
+
+# --- other spellings match ------------------------------------------------------
+
+from tests.factories import make_location, make_tour  # noqa: E402
+
+
+@pytest.mark.parametrize("stored", ["Cote d'Ivoire", "Côte d'Ivoire", "Ivory Coast", "Côte d’Ivoire"])
+@pytest.mark.parametrize("asked", ["Côte d'Ivoire", "Cote d'Ivoire", "ivory coast", "C%C3%B4te%20d%E2%80%99Ivoire"])
+def test_locations_found_whatever_the_ivory_coast_spelling(client, db, stored, asked):
+    make_location(db, name="Basilica of Our Lady of Peace", country=stored)
+    make_location(db, name="Kakum", country="Ghana")
+    names = [l["name"] for l in client.get(f"/api/tours/locations/country/{asked}").json()]
+    assert names == ["Basilica of Our Lady of Peace"]
+
+
+def test_location_lookup_still_matches_part_of_name(client, db):
+    make_location(db, name="Kakum", country="Ghana")
+    assert [l["name"] for l in client.get("/api/tours/locations/country/ghan").json()] == ["Kakum"]
+
+
+def test_tours_by_country_match_other_spellings(client, db):
+    make_tour(db, name="Abidjan Lagoon", country="Cote d'Ivoire", is_popular=True)
+    names = [t["name"] for t in client.get("/api/tours/country/Côte d'Ivoire").json()]
+    assert names == ["Abidjan Lagoon"]
+
+
+def test_old_event_spelling_still_filtered(client, db):
+    make_event(db, name="Old Abidjan", countries=["Cote d'Ivoire"], country="Cote d'Ivoire")
+    assert [e["name"] for e in client.get("/api/events/?country=Côte d'Ivoire").json()] == ["Old Abidjan"]
+
+
+@pytest.mark.parametrize("typed", ["Bénin", "republic of benin"])
+def test_benin_spellings(typed):
+    assert normalise_country(typed) == "Benin"
+
+
+def test_country_options_endpoint(client):
+    body = client.get("/api/tours/countries/options").json()
+    names = [c["name"] for c in body]
+    assert names == ["Benin", "Burkina Faso", "Côte d'Ivoire", "Ghana", "Togo"]
+    ivory = next(c for c in body if c["name"] == "Côte d'Ivoire")
+    assert "Ivory Coast" in ivory["also_known_as"]
