@@ -110,3 +110,12 @@ def test_country_options_endpoint(client):
     assert names == ["Benin", "Burkina Faso", "Côte d'Ivoire", "Ghana", "Togo"]
     ivory = next(c for c in body if c["name"] == "Côte d'Ivoire")
     assert "Ivory Coast" in ivory["also_known_as"]
+
+
+def test_country_tabs_merge_spellings(client, db):
+    make_tour(db, name="Abidjan City Tour", country="Cote d'Ivoire")
+    make_tour(db, name="Yamoussoukro Heritage Tour", country="Côte d'Ivoire")
+    make_tour(db, name="Accra", country="Ghana")
+    make_tour(db, name="Old lowercase", country="ghana")
+    countries = client.get("/api/tours/tours/countries").json()["countries"]
+    assert sorted(countries) == ["Côte d'Ivoire", "Ghana"]

@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.services.countries import country_column_matches
+from src.services.countries import country_column_matches, normalise_country
 from src.models import models
 from src.schemas import schemas
 from src.services.booking_status import booking_reference, record_created
@@ -43,11 +43,11 @@ def get_tours_by_country(db: Session, country: str, is_popular: bool = True) -> 
 
 
 def get_countries_with_tours(db: Session) -> List[str]:
-    """Get all unique countries that have active tours"""
-    countries = db.query(models.Tour.country).filter(
+    """Countries that have visible tours, one entry per country however it is spelled."""
+    rows = db.query(models.Tour.country).filter(
         visible_filter(models.Tour)
-    ).distinct().all()
-    return [country[0] for country in countries]
+    ).distinct().order_by(models.Tour.country).all()
+    return list(dict.fromkeys(normalise_country(row[0]) for row in rows if row[0] and row[0].strip()))
 
 
 def create_tour(db: Session, tour: schemas.TourCreate) -> models.Tour:
