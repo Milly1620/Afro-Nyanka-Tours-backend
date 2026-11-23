@@ -50,12 +50,14 @@ class CloudinaryService:
             Dictionary with image URL and public_id, or None if upload fails
         """
         try:
-            # Default transformations for tour images
+            # Default for tour/event images: keep the whole picture. "limit" only
+            # shrinks images larger than 2000px (keeping their shape) and never
+            # crops; the frontend crops for display (object-fit / URL transforms).
             if transformation is None:
                 transformation = {
-                    "width": 1200,
-                    "height": 800,
-                    "crop": "fill",
+                    "width": 2000,
+                    "height": 2000,
+                    "crop": "limit",
                     "quality": "auto:good",
                     "format": "webp"
                 }
