@@ -232,6 +232,8 @@ class Event(Base):
     __table_args__ = (
         CheckConstraint("status IN ('draft', 'published', 'scheduled')", name="ck_events_status"),
         CheckConstraint("end_date >= start_date", name="ck_events_dates"),
+        CheckConstraint("sharing_price_ghs >= 0", name="ck_events_sharing_price_nonnegative"),
+        CheckConstraint("couple_price_ghs >= 0", name="ck_events_couple_price_nonnegative"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -244,7 +246,9 @@ class Event(Base):
     start_date = Column(Date, nullable=False, index=True)
     end_date = Column(Date, nullable=False)
     duration_days = Column(Integer)
-    price_ghs = Column(Integer)
+    price_ghs = Column(Integer)  # per person
+    sharing_price_ghs = Column(Integer)  # NULL = not offered
+    couple_price_ghs = Column(Integer)  # NULL = not offered
     capacity = Column(Integer)
     highlights = Column(JSON, nullable=False, server_default="[]", default=list)
     main_image_url = Column(String)

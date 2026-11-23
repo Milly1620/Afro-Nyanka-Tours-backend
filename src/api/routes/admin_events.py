@@ -31,7 +31,7 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 
 FIELDS = (
     "name", "description", "countries", "country", "region", "destination", "start_date", "end_date",
-    "price_ghs", "capacity", "highlights", "status", "publish_at",
+    "price_ghs", "sharing_price_ghs", "couple_price_ghs", "capacity", "highlights", "status", "publish_at",
 )  # duration_days is not here: it is calculated from the dates
 
 

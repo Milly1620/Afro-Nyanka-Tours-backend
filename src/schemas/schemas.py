@@ -400,6 +400,8 @@ class PublicEvent(BaseModel):
     end_date: date
     duration_days: Optional[int] = None
     price_ghs: Optional[int] = None
+    sharing_price_ghs: Optional[int] = None
+    couple_price_ghs: Optional[int] = None
     capacity: Optional[int] = None
     highlights: List[str] = []
     main_image_url: Optional[str] = None

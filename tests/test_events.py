@@ -214,3 +214,40 @@ def test_patch_event_countries(client, admin_headers):
     r = client.patch(f"{ADMIN}/{event_id}", json={"country": "Togo"}, headers=admin_headers)
     assert r.json()["countries"] == ["Togo"]
     assert client.patch(f"{ADMIN}/{event_id}", json={"countries": []}, headers=admin_headers).status_code == 422
+
+
+# Sharing / couple prices -------------------------------------------------------------
+
+def test_event_sharing_and_couple_prices_saved_and_returned(client, db, admin_headers):
+    r = _create(client, admin_headers, status="published", price_ghs=2500,
+                sharing_price_ghs=2000, couple_price_ghs=4500)
+    assert r.status_code == 201, r.text
+    event_id = r.json()["id"]
+    for url in (f"{ADMIN}/{event_id}", f"/api/events/{event_id}"):
+        body = client.get(url, headers=admin_headers).json()
+        assert (body["price_ghs"], body["sharing_price_ghs"], body["couple_price_ghs"]) == (2500, 2000, 4500)
+    [listed] = [e for e in client.get("/api/events/").json() if e["id"] == event_id]
+    assert listed["couple_price_ghs"] == 4500
+
+
+def test_event_optional_prices_default_to_null_keys(client, admin_headers):
+    r = _create(client, admin_headers, price_ghs=2500)
+    assert r.status_code == 201
+    assert r.json()["sharing_price_ghs"] is None and r.json()["couple_price_ghs"] is None
+
+
+def test_patch_null_clears_optional_prices(client, admin_headers):
+    event_id = _create(client, admin_headers, price_ghs=2500, sharing_price_ghs=2000, couple_price_ghs=4500).json()["id"]
+    r = client.patch(f"{ADMIN}/{event_id}", json={"sharing_price_ghs": None, "couple_price_ghs": 4000}, headers=admin_headers)
+    assert r.status_code == 200, r.text
+    assert (r.json()["sharing_price_ghs"], r.json()["couple_price_ghs"]) == (None, 4000)
+
+
+def test_optional_prices_cannot_be_negative(client, admin_headers):
+    assert _create(client, admin_headers, sharing_price_ghs=-1).status_code == 422
+    assert _create(client, admin_headers, couple_price_ghs=-5).status_code == 422
+
+
+def test_event_created_without_region(client, admin_headers):
+    r = _create(client, admin_headers, price_ghs=2500, destination="Accra")
+    assert r.status_code == 201 and r.json()["region"] is None and r.json()["destination"] == "Accra"

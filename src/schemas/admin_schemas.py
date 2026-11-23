@@ -177,6 +177,8 @@ class AdminEventCreate(BaseModel):
     end_date: date
     duration_days: Optional[int] = Field(None, ge=1)
     price_ghs: Optional[int] = Field(None, ge=0)
+    sharing_price_ghs: Optional[int] = Field(None, ge=0)
+    couple_price_ghs: Optional[int] = Field(None, ge=0)
     capacity: Optional[int] = Field(None, ge=1)
     highlights: List[str] = []
     status: PublishStatus = "draft"
@@ -203,6 +205,8 @@ class AdminEventUpdate(BaseModel):
     end_date: Optional[date] = None
     duration_days: Optional[int] = Field(None, ge=1)
     price_ghs: Optional[int] = Field(None, ge=0)
+    sharing_price_ghs: Optional[int] = Field(None, ge=0)
+    couple_price_ghs: Optional[int] = Field(None, ge=0)
     capacity: Optional[int] = Field(None, ge=1)
     highlights: Optional[List[str]] = None
     status: Optional[PublishStatus] = None
